@@ -80,17 +80,69 @@ class InverseFrequencyWeights:
     samples are emphasised without changing the effective step size.
     """
 
-    def __init__(self, targets: Tensor, *, eps: float = 1e-6) -> None:
+    def __init__(self, targets: Tensor, *, n_classes: int | None = None, eps: float = 1e-6) -> None:
+        """``targets`` are class indices; ``n_classes`` is the full class count.
+
+        ``n_classes`` matters whenever the largest class index is absent from
+        ``targets``, which is not hypothetical here. The severity head has four
+        bands and the whole corpus holds only a handful of severe cases, so a
+        given 131-patient training split can contain none of them. Inferring the
+        class count as ``max + 1`` then yields three weights, and
+        ``cross_entropy(weight=...)`` rejects it::
+
+            RuntimeError: weight tensor should be defined either for all 4
+            classes or no classes but got weight tensor of shape: [3]
+
+        An absent class therefore gets weight 1.0 -- the unweighted contribution
+        it would have had anyway -- rather than the ``1/f`` value it would take
+        if a single member happened to be present. That asymmetry is deliberate:
+        the rare class is rare, and inventing a large weight for a class with no
+        members would not correct the imbalance, it would be a large number
+        multiplied by zero.
+        """
         if targets.numel() == 0:
             raise ValueError("cannot compute class weights from an empty tensor")
-        counts = torch.bincount(targets.long(), minlength=int(targets.max().item()) + 1)
-        freq = counts.float() / counts.sum().clamp_min(1)
-        raw = 1.0 / (freq + eps)
-        # freq @ raw == K, so this divides the mean weight down to 1.
-        self.weights = raw / (freq @ raw).clamp_min(eps)
+        index = targets.long()
+        if n_classes is None:
+            n_classes = int(index.max().item()) + 1
+        if n_classes <= 0:
+            raise ValueError(f"n_classes must be positive, got {n_classes}")
+        if int(index.max().item()) >= n_classes:
+            raise ValueError(
+                f"target index {int(index.max().item())} is out of range for {n_classes} classes"
+            )
+
+        counts = torch.bincount(index, minlength=n_classes)[:n_classes].float()
+        freq = counts / counts.sum().clamp_min(1.0)
+        raw = torch.where(counts > 0, 1.0 / (freq + eps), torch.ones_like(freq))
+        # Only present classes contribute to the weighted mean, since an absent
+        # class has no samples to average over. Dividing by it lands the mean at
+        # exactly 1.0 for any class distribution.
+        mean_weight = (freq * raw).sum()
+        self.weights = raw / mean_weight.clamp_min(eps)
+
+    def to(self, device: torch.device | str) -> Tensor:
+        """The per-class weight vector, moved to ``device``.
+
+        Returns the tensor rather than ``self``, because
+        ``torch.nn.functional`` wants the tensor and the call sites should not
+        have to know that this class is not an ``nn.Module``. A ``.to()``
+        returning ``self`` would read like the torch idiom and quietly do
+        nothing useful.
+        """
+        return self.weights.to(device)
 
     def __call__(self, targets: Tensor) -> Tensor:
-        return self.weights.to(targets.device)[targets]
+        """Per-sample weight for each target class.
+
+        ``targets`` may be float or integer: a float binary label of 0.0 or 1.0
+        is an index in all but type, and ``tensor[float_tensor]`` raises rather
+        than indexing, so the cast belongs here. Doing it in the callers instead
+        means every caller has to remember, and one that does not gets an
+        IndexError from deep inside tensor indexing rather than a clear message.
+        """
+        index = targets.long()
+        return self.weights.to(index.device)[index]
 
 
 class WeightedCrossEntropy(nn.Module):

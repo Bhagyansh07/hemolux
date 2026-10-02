@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security or patient-data concern
+    url: https://github.com/Bhagyansh07/hemolux/security/advisories/new
+    about: Report privately. Concerns about how patient data is handled should not be a public issue.
+  - name: Method or result question
+    url: https://github.com/Bhagyansh07/hemolux/discussions
+    about: Questions about the colourimetry, the fairness audit, or a published number.

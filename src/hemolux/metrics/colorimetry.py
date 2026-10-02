@@ -106,15 +106,49 @@ def rgb_to_lab(rgb: NDArray[np.ndarray]) -> NDArray[np.float64]:
     return lab.reshape(arr.shape)
 
 
-def mask_mean_lab(rgb: NDArray[np.ndarray], mask: NDArray[np.ndarray] | None) -> NDArray[np.float64]:
-    """Mean CIELAB over ``mask``; over the whole image when ``mask`` is ``None``."""
-    lab = rgb_to_lab(rgb)
+def _spatial_mask(
+    mask: NDArray[np.ndarray] | None, spatial_shape: tuple[int, int]
+) -> NDArray[np.bool_] | None:
+    """Broadcast a caller-supplied mask against an image's ``(H, W)`` shape.
+
+    Returns ``None`` for "no mask", so callers can pass the result straight
+    through to :func:`_select`. Segmentation output routinely arrives with a
+    trailing singleton axis, ``(H, W, 1)``, and per-row or per-column masks are
+    useful for tests; ``np.broadcast_to`` accepts all of these, whereas direct
+    ``lab[mask]`` indexing raises on anything but exactly ``(H, W)``.
+    """
     if mask is None:
-        return lab.reshape(-1, 3).mean(axis=0)
+        return None
     sel = np.asarray(mask, dtype=bool)
-    if not sel.any():
+    try:
+        return np.broadcast_to(sel, spatial_shape)
+    except ValueError as exc:
+        raise ValueError(
+            f"mask of shape {sel.shape} does not broadcast to image {spatial_shape}"
+        ) from exc
+
+
+def _select(
+    lab: NDArray[np.float64], sel: NDArray[np.bool_] | None
+) -> NDArray[np.float64]:
+    """Flatten an ``(H, W, 3)`` image to the ``(K, 3)`` rows a mask selects."""
+    return lab.reshape(-1, 3) if sel is None else lab[sel]
+
+
+def mask_mean_lab(
+    rgb: NDArray[np.ndarray], mask: NDArray[np.ndarray] | None
+) -> NDArray[np.float64]:
+    """Mean CIELAB over ``mask``; over the whole image when ``mask`` is ``None``.
+
+    An empty mask yields NaN rather than raising, because a patient whose
+    conjunctiva could not be segmented still has to appear in the denominator
+    of a subgroup table.
+    """
+    lab = rgb_to_lab(rgb)
+    sel = _spatial_mask(mask, lab.shape[:2])
+    if sel is not None and not sel.any():
         return np.full(3, np.nan)
-    return lab[sel].mean(axis=0)
+    return _select(lab, sel).mean(axis=0)
 
 
 # --------------------------------------------------------------------------- #
@@ -228,15 +262,16 @@ def extract_colour_features(rgb: NDArray[np.ndarray], mask: NDArray[np.ndarray] 
     """
     arr = np.asarray(rgb)
     lab = rgb_to_lab(arr)
-    lab_mean = mask_mean_lab(arr, mask)
+    sel = _spatial_mask(mask, lab.shape[:2])
+    lab_mean = _select(lab, sel).mean(axis=0)
 
-    roi = lab if mask is None else lab[np.asarray(mask, dtype=bool)]
+    roi = _select(lab, sel)
     hsv = cv2.cvtColor(
         cv2.cvtColor(arr.astype(np.uint8), cv2.COLOR_RGB2RGB) if arr.dtype != np.uint8 else arr,
         cv2.COLOR_RGB2HSV,
     )
     hsv = cv2.cvtColor(arr, cv2.COLOR_RGB2HSV) if arr.dtype == np.uint8 else hsv
-    hsv_roi = hsv if mask is None else hsv[np.asarray(mask, dtype=bool)]
+    hsv_roi = hsv if sel is None else hsv[sel]
 
     return ColourFeatureVector(
         lab_l=float(lab_mean[0]),
@@ -256,14 +291,25 @@ def extract_colour_features(rgb: NDArray[np.ndarray], mask: NDArray[np.ndarray] 
 # Skin tone and pigmentation — the fairness axis
 # --------------------------------------------------------------------------- #
 
-#: Standard dermatological ITA bands (Del Bino et al., *J Am Acad Dermatol*,
-#: 2007). Boundaries are the values used to bin subgroups in the C3 audit.
+#: Standard dermatological ITA bands, from the six-category objective scale in
+#: Chardon et al. 1991 and Del Bino & Bernerd 2013 (*J Invest Dermatol* 140:3,
+#: 2020), which is the form cited in the fairness audit. Boundaries, in degrees:
+#:
+#:     very light  >  55      light  41..55      intermediate  28..41
+#:     tan         10..28     brown -30..10     dark        <= -30
+#:
+#: These are *lower* bounds tested with ``>=``, so they must stay in descending
+#: order. Dropping the "brown" band is not cosmetic: it is the band containing
+#: most South Asian skin tones, which is precisely the population this project
+#: is about, and merging it into "dark" would mislabel the subgroup the whole
+#: fairness claim rests on. -90 is the arithmetic floor of ITA (arctan2 of a
+#: negative lightness offset over zero b*), not a band boundary.
 ITA_BANDS: tuple[tuple[float, str], ...] = (
     (55.0, "very_light"),
     (41.0, "light"),
     (28.0, "intermediate"),
     (10.0, "tan"),
-    (-90.0, "dark"),
+    (-30.0, "brown"),
 )
 
 
@@ -295,13 +341,18 @@ def ita_angle(lab_mean: NDArray[np.float64]) -> float:
 
 
 def ita_band(ita_deg: float) -> str:
-    """Map an ITA degree value onto a named dermatological band."""
+    """Map an ITA degree value onto a named dermatological band.
+
+    Anything below the last threshold is "dark". Anything non-finite is
+    "unknown", which is kept distinct from a real band so that a missing
+    measurement can never be counted as a pigmentation subgroup.
+    """
     if not np.isfinite(ita_deg):
         return "unknown"
     for threshold, name in ITA_BANDS:
         if ita_deg >= threshold:
             return name
-    return "very_dark"
+    return "dark"
 
 
 def conjunctival_pigmentation(lab_mean: NDArray[np.float64]) -> float:

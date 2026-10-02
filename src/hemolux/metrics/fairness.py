@@ -184,13 +184,24 @@ def bias_vs_ita(
     if not 0.0 < confidence < 1.0:
         raise ValueError(f"confidence must lie strictly in (0, 1), got {confidence!r}")
 
-    a, b = _clean(y_true, y_pred)
+    # One mask for all three columns, not one per column. `_clean` drops
+    # non-finite (y_true, y_pred) pairs; if ITA were filtered separately the two
+    # filters could disagree, which either crashes on a shape mismatch or worse,
+    # pairs a patient's ITA° with another patient's error. Patient-to-patient
+    # misalignment in a fairness audit would produce a confident wrong answer.
+    a = np.asarray(y_true, dtype=np.float64).ravel()
+    b = np.asarray(y_pred, dtype=np.float64).ravel()
     x = np.asarray(ita_deg, dtype=np.float64).ravel()
-    if x.shape != a.shape:
-        raise ValueError(f"ita shape {x.shape} does not match {a.shape}")
 
-    ok = np.isfinite(x)
-    x, y = x[ok], (b - a)[ok]
+    if not (a.shape == b.shape == x.shape):
+        raise ValueError(
+            f"shape mismatch: y_true {a.shape}, y_pred {b.shape}, ita {x.shape}"
+        )
+
+    ok = np.isfinite(a) & np.isfinite(b) & np.isfinite(x)
+    a, b, x = a[ok], b[ok], x[ok]
+    y = b - a
+
     if x.size < 3:
         # OLS needs two degrees of freedom before a slope means anything, and
         # BiasSlope is a plain dataclass, so every field is named explicitly.
@@ -284,13 +295,19 @@ class FusionComparison:
     single_site_mae: dict[str, float] = field(default_factory=dict)
     fused_mae: dict[str, float] = field(default_factory=dict)
 
+    @staticmethod
+    def _pooled(values: dict[str, float]) -> float:
+        # An empty mean is nan, not 0.0. Returning 0.0 would make a missing
+        # group look like a perfect one and quietly improve the fusion gap.
+        return float(np.mean(list(values.values()))) if values else float("nan")
+
     @property
     def pooled_single(self) -> float:
-        return float(np.mean(list(self.single_site_mae.values())))
+        return self._pooled(self.single_site_mae)
 
     @property
     def pooled_fused(self) -> float:
-        return float(np.mean(list(self.fused_mae.values())))
+        return self._pooled(self.fused_mae)
 
     @property
     def worst_group_single(self) -> float:
@@ -330,15 +347,20 @@ def fairness_gate(slope: BiasSlope, *, min_abs_slope: float = 0.002) -> str:
 
     Returns one of:
 
-    * ``"supported"`` — the 95% CI for the bias-vs-ITA° slope excludes zero.
-    * ``"not_supported"`` — the interval contains zero. An honest negative; the
-      report says so and moves on. It does not get buried.
+    * ``"supported"`` — the confidence interval for the bias-vs-ITA° slope
+      excludes zero *and* the effect is at least ``min_abs_slope``.
+    * ``"not_supported"`` — the interval contains zero, or the effect is too
+      small to act on. An honest negative; the report says so and moves on. It
+      does not get buried.
     * ``"underpowered"`` — too few samples with a finite ITA° value to say
       anything, which is a statement about the dataset, not about the model.
     """
     if not np.isfinite(slope.slope) or slope.n < 20:
         return "underpowered"
-    if slope.ci_low * slope.ci_high <= 0.0:
+    # An interval excludes zero exactly when both bounds share a sign, which is
+    # when their product is strictly positive. A product <= 0 means the interval
+    # CONTAINS zero, which is the absence of evidence, not the presence of it.
+    if slope.ci_low * slope.ci_high > 0.0:
         return "supported" if abs(slope.slope) >= min_abs_slope else "not_supported"
     return "not_supported"
 

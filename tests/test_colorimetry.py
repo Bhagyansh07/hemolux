@@ -30,11 +30,22 @@ class TestSrgbLinearisation:
         assert srgb_to_linear(np.array([0.0]))[0] == pytest.approx(0.0, abs=1e-12)
         assert srgb_to_linear(np.array([1.0]))[0] == pytest.approx(1.0, abs=1e-12)
 
-    def test_255_input_is_detected_and_not_double_divided(self):
-        # A common bug: passing 0-255 data to a 0-1 transfer function, which
-        # silently crushes every channel to the linear segment.
+    def test_8bit_input_is_normalised_then_linearised(self):
+        # A common bug: handing 0-255 data to a transfer function defined on
+        # 0-1, which crushes every channel onto the near-linear segment. The
+        # function must both detect the 8-bit range and still apply the EOTF.
+        # 128/255 = 0.50196 encoded; its linear value is 0.21586, which is the
+        # standard linear-light figure for 8-bit mid grey.
         assert srgb_to_linear(np.array([255.0]))[0] == pytest.approx(1.0, abs=1e-9)
-        assert srgb_to_linear(np.array([128.0]))[0] == pytest.approx(128.0 / 255.0, abs=1e-9)
+        assert srgb_to_linear(np.array([0.0]))[0] == pytest.approx(0.0, abs=1e-12)
+        assert srgb_to_linear(np.array([128.0]))[0] == pytest.approx(0.2158605, abs=1e-6)
+
+    def test_unit_input_is_linearised_too(self):
+        # 0.50196 already in 0-1 must give the identical answer as 128/255,
+        # i.e. range detection must not change the result.
+        assert srgb_to_linear(np.array([128.0 / 255.0]))[0] == pytest.approx(
+            srgb_to_linear(np.array([128.0]))[0], abs=1e-12
+        )
 
     def test_monotonic_increasing(self):
         vals = np.linspace(0, 255, 64)
@@ -60,15 +71,34 @@ class TestRgbToLab:
         assert abs(lab[1]) < 0.5
         assert abs(lab[2]) < 0.5
 
-    def test_red_and_blue_sit_on_opposite_a_axes(self):
-        red = rgb_to_lab(np.full((1, 1, 3), (255, 0, 0), dtype=np.uint8))[0, 0]
+    def test_pure_srgb_primaries_match_published_cielab(self):
+        # Canonical CIELAB (D65) values for the sRGB primaries. Worth stating
+        # plainly because the naive expectation is wrong: blue has a* = +79,
+        # not negative. The a* axis is green(-)/red(+), and blue is not green.
+        expected = {
+            "red": ((255, 0, 0), (53.241, 80.092, 67.203)),
+            "green": ((0, 255, 0), (87.735, -86.183, 83.179)),
+            "blue": ((0, 0, 255), (32.297, 79.188, -107.860)),
+            "yellow": ((255, 255, 0), (97.137, -21.554, 94.478)),
+        }
+        for name, (rgb, (l_exp, a_exp, b_exp)) in expected.items():
+            lab = rgb_to_lab(np.full((1, 1, 3), rgb, dtype=np.uint8))[0, 0]
+            assert lab[0] == pytest.approx(l_exp, abs=0.02), name
+            assert lab[1] == pytest.approx(a_exp, abs=0.02), name
+            assert lab[2] == pytest.approx(b_exp, abs=0.02), name
+
+    def test_only_green_is_negative_on_the_a_axis(self):
+        # The sign convention conjunctival_pigmentation depends on is on b*,
+        # not a*. Assert it explicitly so a channel swap cannot pass.
+        green = rgb_to_lab(np.full((1, 1, 3), (0, 255, 0), dtype=np.uint8))[0, 0]
+        assert green[1] < 0.0
+
+    def test_b_axis_separates_blue_from_yellow(self):
+        # This is the sign convention the melanin proxy is built on.
         blue = rgb_to_lab(np.full((1, 1, 3), (0, 0, 255), dtype=np.uint8))[0, 0]
-        assert red[1] > 60.0
-        assert blue[1] < 0.0
-        # Blue is negative on b*, yellow positive. This sign convention is what
-        # conjunctival_pigmentation depends on.
+        yellow = rgb_to_lab(np.full((1, 1, 3), (255, 255, 0), dtype=np.uint8))[0, 0]
         assert blue[2] < -80.0
-        assert rgb_to_lab(np.full((1, 1, 3), (255, 255, 0), dtype=np.uint8))[0, 0][2] > 80.0
+        assert yellow[2] > 80.0
 
     def test_rejects_wrong_shape(self):
         with pytest.raises(ValueError, match="H, W, 3"):
@@ -85,7 +115,9 @@ class TestMaskedMean:
         img[:5] = 255
         full = mask_mean_lab(img, None)
         top = mask_mean_lab(img, np.arange(10)[:, None] < 5)
-        assert full[0] > 100.0  # grey overall
+        # Half white, half black, so L* averages to 50. L* is bounded to
+        # [0, 100] by the standard, so it can never exceed 100 here.
+        assert full[0] == pytest.approx(50.0, abs=0.05)
         assert top[0] > 99.0  # white half only
 
     def test_empty_mask_is_nan_not_a_crash(self):
@@ -157,14 +189,47 @@ class TestItaAngle:
         dark = ita_angle(np.array([28.0, 10.0, 14.0]))
         assert dark < light
 
-    def test_bands_are_monotone_and_complete(self):
+    def test_bands_follow_the_six_category_ita_scale(self):
+        # Chardon 1991 / Del Bino & Bernerd 2013, as tabulated in Ly et al.,
+        # J Invest Dermatol 140:3 (2020). Six categories, not seven: there is
+        # no "very_dark". Boundaries are 55 / 41 / 28 / 10 / -30.
         assert ita_band(80.0) == "very_light"
+        assert ita_band(55.0) == "very_light"  # boundary is inclusive upward
         assert ita_band(50.0) == "light"
+        assert ita_band(41.0) == "light"
         assert ita_band(35.0) == "intermediate"
+        assert ita_band(28.0) == "intermediate"
         assert ita_band(20.0) == "tan"
-        assert ita_band(5.0) == "dark"
-        assert ita_band(-90.0) == "very_dark"
+        assert ita_band(10.0) == "tan"
+
+    def test_brown_band_exists_and_is_not_labelled_dark(self):
+        # Regression test. The band was previously missing, which merged
+        # ITA -30..10 into "dark" and so mislabelled most South Asian skin
+        # tones as dark, in the one subgroup this project is actually about.
+        assert ita_band(0.0) == "brown"
+        assert ita_band(-29.9) == "brown"
+        assert ita_band(-30.0) == "brown"
+
+    def test_dark_is_the_floor_band(self):
+        assert ita_band(-31.0) == "dark"
+        assert ita_band(-90.0) == "dark"  # arctan2 lower bound of ITA
+
+    def test_bands_cover_the_whole_ita_domain(self):
+        # Every finite ITA must land in exactly one band, with no gaps, and the
+        # ordering must never go backwards as ITA decreases.
+        order = ["very_light", "light", "intermediate", "tan", "brown", "dark"]
+        seen = [ita_band(v) for v in np.linspace(90.0, -90.0, 721)]
+        for value, band in zip(np.linspace(90.0, -90.0, 721), seen, strict=True):
+            assert band in order, value
+        ranks = [order.index(b) for b in seen]
+        assert all(np.diff(ranks) >= 0), "band sequence is not monotone"
+
+    def test_nonfinite_ita_is_unknown_not_a_band(self):
+        # A missing measurement must never be silently counted as a
+        # pigmentation subgroup.
         assert ita_band(float("nan")) == "unknown"
+        assert ita_band(float("inf")) == "unknown"
+        assert ita_band(float("-inf")) == "unknown"
 
 
 class TestPigmentation:
@@ -177,8 +242,21 @@ class TestPigmentation:
         assert conjunctival_pigmentation(np.array([50.0, 0.0, -50.0])) == 0.0
         assert conjunctival_pigmentation(np.array([50.0, 0.0, 500.0])) == 1.0
 
-    def test_nan_propagates(self):
-        assert np.isnan(conjunctival_pigmentation(np.array([np.nan, 0.0, 10.0])))
+    def test_nan_in_b_star_propagates(self):
+        # The proxy reads b* only, so NaN must be in the channel it actually
+        # uses. NaN in L* or a* is irrelevant by design and must not mask a
+        # perfectly good b* reading.
+        assert np.isnan(conjunctival_pigmentation(np.array([50.0, 0.0, np.nan])))
+        assert np.isnan(conjunctival_pigmentation(np.array([np.nan, 0.0, np.nan])))
+        assert not np.isnan(conjunctival_pigmentation(np.array([np.nan, np.nan, 20.0])))
+
+    def test_pigmentation_band_uses_ink_not_absorption_direction(self):
+        # b* rises with melanin concentration within the conjunctival ROI, so
+        # a more pigmented ROI scores higher. Pinned so a sign flip in the
+        # proxy cannot pass silently.
+        low = conjunctival_pigmentation(np.array([50.0, 20.0, 8.0]))
+        high = conjunctival_pigmentation(np.array([50.0, 20.0, 30.0]))
+        assert high > low
 
     def test_bands_partition_the_unit_interval(self):
         assert pigmentation_band(0.1) == "low"

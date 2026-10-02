@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from hemolux.data.dataset import DEFAULT_ROOT
 from hemolux.data.quality import QUALITY_ABSTAIN, check_quality
-from hemolux.imagemeta import silence_corrupt_iccp
+from hemolux.imagemeta import quiet_image_decoder, silence_corrupt_iccp
 
 #: Candidates reported alongside the live constant, to bracket the region where
 #: the branch starts doing something.
@@ -51,11 +51,16 @@ def main() -> int:
         return 2
 
     rows = []
-    for path in sorted(root.rglob("*.jpg")) + sorted(root.rglob("*.png")):
-        image = cv2.imread(str(path), cv2.IMREAD_COLOR)
-        if image is None:
-            continue
-        rows.append(check_quality(image))
+    # 639 masks in the real corpus, each with a malformed iCCP chunk. OpenCV hands
+    # PNGs to libpng, which writes the diagnostic from C to fd 2, so this loop is
+    # wrapped rather than relying on the Pillow filter above: that one cannot see
+    # these warnings, and the sweep's own output is the thing being buried.
+    with quiet_image_decoder():
+        for path in sorted(root.rglob("*.jpg")) + sorted(root.rglob("*.png")):
+            image = cv2.imread(str(path), cv2.IMREAD_COLOR)
+            if image is None:
+                continue
+            rows.append(check_quality(image))
 
     if not rows:
         print(f"no readable images under {root}", file=sys.stderr)

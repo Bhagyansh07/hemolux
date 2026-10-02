@@ -37,11 +37,12 @@ Nothing below is claimed ahead of the code that would produce it.
 | Losses | implemented, 54 tests |
 | Backbone builder and five regression heads | implemented, 26 tests |
 | Corpus validator and synthetic fixture | implemented, 15 tests |
+| Image metadata warning filter | implemented, 17 tests |
 | Training loop and CLI | in progress, not in this tree |
 | ONNX export and browser runtime | in progress, not in this tree |
 | Measured results | not yet published; [EVALS.md](EVALS.md) is a stub |
 
-568 tests, all passing, `ruff check .` clean.
+585 tests, all passing, `ruff check .` clean.
 
 ## The claims this project tests
 
@@ -113,7 +114,7 @@ scripts/
   quality_sweep.py          measures the corpus to justify QUALITY_ABSTAIN
   validate_dataset.py       checks a corpus before anything downstream may use it
   make_synthetic_fixture.py writes a corpus in the real layout, for CI
-tests/                      568 tests
+tests/                      585 tests
 ```
 
 ## Dataset
@@ -154,7 +155,7 @@ wheels that this project never uses. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Development
 
 ```bash
-pytest                                  # 568 tests
+pytest                                  # 585 tests
 ruff check .                            # lint
 python scripts/validate_dataset.py      # what is actually in the corpus
 python scripts/quality_sweep.py         # corpus quality distribution

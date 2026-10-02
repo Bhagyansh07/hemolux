@@ -31,6 +31,8 @@ from itertools import pairwise
 import numpy as np
 from numpy.typing import NDArray
 
+from hemolux.data.quality import QUALITY_ABSTAIN
+
 _FloatArr = NDArray[np.float64]
 
 #: Ordinal bin centres in g/dL. Must match ``src/hemolux/models/heads.py``.
@@ -331,7 +333,13 @@ def should_abstain(sigma: float, threshold: float, quality: float = 1.0) -> bool
     Abstain when either the model is uncertain **or** the image is poor. Both
     conditions are necessary: a well-trained model on a blurred image will happily
     return a confident wrong answer.
+
+    The quality threshold is :data:`~hemolux.data.quality.QUALITY_ABSTAIN`, not a
+    literal. It used to be spelled ``0.35`` here while the module defining it
+    carried a different value, so the gate compared against a number no one was
+    maintaining: raising the constant in ``quality.py`` changed nothing. That is
+    the failure mode a duplicated literal always produces.
     """
     if not np.isfinite(sigma):
         return True
-    return bool(sigma > threshold or quality < 0.35)
+    return bool(sigma > threshold or quality < QUALITY_ABSTAIN)

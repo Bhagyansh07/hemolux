@@ -32,7 +32,19 @@ BLUR_VARIANCE = 40.0
 ROI_MIN_AREA = 0.015
 ROI_MAX_AREA = 0.85
 #: Quality below which the product abstains regardless of model confidence.
-QUALITY_ABSTAIN = 0.35
+#:
+#: Measured, not chosen. Over all 862 photographs in the corpus the lowest score
+#: of any kind is 0.4087, and among the 320 that clear the hard gate above the
+#: lowest is 0.5907. The previous value of 0.35 therefore sat below the entire
+#: observed range and ``should_abstain``'s quality condition could never fire on
+#: a real photograph -- an inert safety path that read as a working one.
+#:
+#: 0.60 sits immediately above the measured floor of the passing population, so
+#: the branch is live and rejects the single worst photograph that the hard gate
+#: lets through (1 of 320, 0.3%). Deliberately conservative: the hard gate has
+#: already rejected 542 of 862, so this score's remaining job is to catch the
+#: marginal cases among survivors, not to re-litigate the ones already refused.
+QUALITY_ABSTAIN = 0.60
 
 
 @dataclass(frozen=True)

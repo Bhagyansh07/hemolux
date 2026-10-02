@@ -89,7 +89,12 @@ def validate_no_patient_leakage(fold: Fold) -> None:
                     f"patient leakage: {len(overlap)} patient(s) in both {a} and {b}: "
                     f"{sorted(overlap)[:5]}"
                 )
-    total = sum(len(s) for s in sets.values())
+    # Counted from the tuples, not from `sets`. Those hold ``set(...)`` values, so
+    # ``sum(len(s) for s in sets.values())`` counts each patient once however many
+    # times it is repeated, ``total`` and ``unique`` come out equal, and this
+    # branch is unreachable. A subject contributing two frames is the realistic
+    # route to a repeat, so it has to be reachable.
+    total = len(fold.train) + len(fold.val) + len(fold.test)
     unique = len(set().union(*sets.values()))
     if total != unique:
         raise AssertionError("a patient appears more than once within a single split")
@@ -239,10 +244,25 @@ def site_holdout_folds(
     distribution.
     """
     found = {s for s in site_of.values() if s}
+    # Two different failures, both of which used to pass silently.
+    #
+    # A patient absent from the mapping entirely: caught by the `not in` test.
+    #
+    # A patient present but mapped to a blank site: the mapping is keyed by
+    # patient id, so `p not in site_of` is False and the old check let it
+    # through. It then matched neither `site_of.get(p) == train_site` nor
+    # `== test_site`, so it was dropped from *both* directions of the holdout
+    # and the reported cross-site MAE quietly covered a smaller population than
+    # the one the corpus validator counts.
     unknown = sorted({p for p in patient_ids if p not in site_of})
     if unknown:
         raise ValueError(
             f"{len(unknown)} patients have no site label, first: {unknown[0]!r}"
+        )
+    blank = sorted(p for p in patient_ids if not str(site_of.get(p, "")).strip())
+    if blank:
+        raise ValueError(
+            f"{len(blank)} patients have a blank site label, first: {blank[0]!r}"
         )
     if len(found) < 2:
         raise ValueError(

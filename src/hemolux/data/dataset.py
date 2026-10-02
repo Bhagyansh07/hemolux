@@ -163,6 +163,14 @@ MASK_SUFFIX_ORDER: tuple[str, ...] = (
 #: them is experiment C2, not because they are expected to win.
 DEFAULT_ROI = "palpebral"
 
+#: Where the Kaggle archive unpacks, relative to the repository root.
+#:
+#: Lives here rather than in the CLI because a second consumer needs it:
+#: ``scripts/quality_sweep.py`` measures the same corpus to justify the abstention
+#: threshold, and a duplicated path literal is how two tools end up disagreeing
+#: about which dataset produced a number.
+DEFAULT_ROOT = "data/raw/eyes-defy-anemia/dataset anemia"
+
 #: Emitted alongside the ONNX graph so the browser transformer can be checked
 #: against the Python one rather than reimplemented from memory.
 PREPROCESS_SPEC: dict[str, object] = {

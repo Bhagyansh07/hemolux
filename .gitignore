@@ -15,11 +15,14 @@ data/synthetic/
 *.zip
 !artifacts/**/*.zip
 
-# --- model weights: shipped as GitHub Release assets, not in git ---
-# brain/12_CICD_GITHUB_ACTIONS.md §6
-artifacts/models/*.pt
-artifacts/models/*.pth
-artifacts/models/*.onnx
+# --- derived artifacts: feature caches, weights, scratch ---
+# brain/12_CICD_GITHUB_ACTIONS.md §6. Weights ship as GitHub Release assets.
+#
+# Written as `artifacts/*` rather than `artifacts/` on purpose: git cannot
+# re-include a path whose parent *directory* is excluded, so `artifacts/` would
+# have silently made the two `!artifacts/...` rules at the end of this file dead
+# and left a 162 KB feature cache on track for commit.
+artifacts/*
 app/web/public/models/*.onnx
 app/web/public/models/*.wasm
 
@@ -64,3 +67,10 @@ Thumbs.db
 # --- keep the derived evidence that backs EVALS.md ---
 !artifacts/reports/
 !artifacts/figures/
+
+# --- local working documents, never published ---
+# An internal planning and specification set. It exists to keep this build
+# self-consistent, not to be read by anyone else, and a public repository has
+# no reason to carry it.
+brain/
+

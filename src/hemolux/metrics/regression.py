@@ -189,7 +189,9 @@ def bland_altman(y_true: _FloatArr, y_pred: _FloatArr) -> BlandAltman:
     )
 
 
-def bias_ci95(y_true: _FloatArr, y_pred: _FloatArr, *, seed: int = 42, n_boot: int = 2000) -> tuple[float, float]:
+def bias_ci95(
+    y_true: _FloatArr, y_pred: _FloatArr, *, seed: int = 42, n_boot: int = 2000
+) -> tuple[float, float]:
     """Percentile bootstrap 95% CI for the Bland–Altman bias.
 
     Seeded, so two runs of the same code produce byte-identical output and a

@@ -121,9 +121,7 @@ def test_achieved_fraction_overshoots_but_never_falls_short() -> None:
 
 def test_larger_budget_never_unfreezes_fewer_parameters() -> None:
     net = _FakeResNet()
-    seen = [
-        apply_unfreezing(net, f).unfrozen_params for f in (0.0, 0.05, 0.2, 0.5, 1.0)
-    ]
+    seen = [apply_unfreezing(net, f).unfrozen_params for f in (0.0, 0.05, 0.2, 0.5, 1.0)]
     assert seen == sorted(seen), f"non-monotone unfreezing: {seen}"
 
 
@@ -131,9 +129,7 @@ def test_full_fraction_unfreezes_everything() -> None:
     net = _FakeResNet()
     report = apply_unfreezing(net, 1.0)
     assert all(p.requires_grad for p in net.parameters())
-    assert report.unfrozen_params == sum(
-        p.numel() for p in net.parameters()
-    )
+    assert report.unfrozen_params == sum(p.numel() for p in net.parameters())
 
 
 def test_raises_when_a_budget_thaws_nothing() -> None:
@@ -213,7 +209,9 @@ def test_frozen_backbone_still_trains_the_head() -> None:
     assert counts["frozen"] > 1_000_000, counts
 
 
-def test_build_model_reports_the_width_mismatch_it_worked_around(capsys: pytest.CaptureFixture[str]) -> None:
+def test_build_model_reports_the_width_mismatch_it_worked_around(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     """The user must see that the advertised width was ignored."""
     build_model(ModelSpec(backbone="mobilenetv3_small_100", pretrained=False))
     assert "reports num_features=576 but emits 1024" in capsys.readouterr().out

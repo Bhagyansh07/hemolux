@@ -161,7 +161,9 @@ class TestHighHueRatio:
     def test_ratio_increases_with_chromaticity(self):
         grey = high_hue_ratio(np.full((2, 2, 3), 128, dtype=np.uint8))
         colourful = high_hue_ratio(
-            np.array([[[200, 30, 40], [180, 60, 90], [210, 20, 30], [150, 70, 110]]], dtype=np.uint8)
+            np.array(
+                [[[200, 30, 40], [180, 60, 90], [210, 20, 30], [150, 70, 110]]], dtype=np.uint8
+            )
         )
         assert colourful > grey
 
@@ -276,9 +278,10 @@ class TestFeatureExtraction:
     def test_mask_changes_the_result(self):
         img = np.zeros((32, 32, 3), dtype=np.uint8)
         img[:16] = 220
-        assert extract_colour_features(img).lab_l != extract_colour_features(
-            img, np.arange(32)[:, None] < 16
-        ).lab_l
+        assert (
+            extract_colour_features(img).lab_l
+            != extract_colour_features(img, np.arange(32)[:, None] < 16).lab_l
+        )
 
     def test_richer_photograph_is_redder(self):
         # Sanity on the direction of the signal: a warm patch must score higher

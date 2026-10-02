@@ -37,9 +37,7 @@ _FloatArr = NDArray[np.float64]
 
 #: Ordinal bin centres in g/dL. Must match ``src/hemolux/models/heads.py``.
 HB_BIN_EDGES = (4.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 18.0)
-HB_BIN_CENTRES = tuple(
-    (lo + hi) / 2.0 for lo, hi in pairwise(HB_BIN_EDGES)
-)
+HB_BIN_CENTRES = tuple((lo + hi) / 2.0 for lo, hi in pairwise(HB_BIN_EDGES))
 N_BINS = len(HB_BIN_CENTRES)
 
 
@@ -220,8 +218,7 @@ def temperature_scale(
         raise ValueError("logits and targets disagree on the number of samples")
     if token.n != target_arr.size:
         raise ValueError(
-            f"ValidationOnly token reports n={token.n} but {target_arr.size} targets "
-            "were supplied"
+            f"ValidationOnly token reports n={token.n} but {target_arr.size} targets were supplied"
         )
 
     def nll(t: float) -> float:
@@ -317,9 +314,7 @@ def risk_coverage_curve(
     return points
 
 
-def abstention_threshold(
-    curve: list[CoveragePoint], target_coverage: float = 0.75
-) -> float:
+def abstention_threshold(curve: list[CoveragePoint], target_coverage: float = 0.75) -> float:
     """Uncertainty threshold that retains ``target_coverage`` of predictions."""
     for point in curve:
         if point.coverage <= target_coverage:

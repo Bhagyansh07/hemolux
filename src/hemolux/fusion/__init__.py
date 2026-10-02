@@ -1,1 +1,1 @@
-﻿"""Multi-site feature fusion (experiment C4)."""
+"""Multi-site feature fusion (experiment C4)."""

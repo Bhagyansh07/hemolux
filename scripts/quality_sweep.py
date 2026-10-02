@@ -69,11 +69,15 @@ def main() -> int:
     print(f"images scored     {len(rows)}")
     print(f"hard-gate pass    {n_passed}   fail: {int((~passed).sum())}")
     print()
-    print(f"all scores        min={scores.min():.4f}  p05={np.percentile(scores, 5):.4f}  "
-          f"median={np.median(scores):.4f}  max={scores.max():.4f}")
-    print(f"passing only      min={scores[passed].min():.4f}  "
-          f"p05={np.percentile(scores[passed], 5):.4f}  "
-          f"median={np.median(scores[passed]):.4f}")
+    print(
+        f"all scores        min={scores.min():.4f}  p05={np.percentile(scores, 5):.4f}  "
+        f"median={np.median(scores):.4f}  max={scores.max():.4f}"
+    )
+    print(
+        f"passing only      min={scores[passed].min():.4f}  "
+        f"p05={np.percentile(scores[passed], 5):.4f}  "
+        f"median={np.median(scores[passed]):.4f}"
+    )
     print()
 
     reasons: dict[str, int] = {}
@@ -102,8 +106,10 @@ def main() -> int:
         return 1
 
     inert = [t for t in CANDIDATES if int((scores[passed] < t).sum()) == 0]
-    print(f"RESULT: the live constant refuses {live_refusals} of {n_passed} passing images "
-          f"({live_refusals / max(1, n_passed):.1%})")
+    print(
+        f"RESULT: the live constant refuses {live_refusals} of {n_passed} passing images "
+        f"({live_refusals / max(1, n_passed):.1%})"
+    )
     if inert:
         print(f"  candidates that would refuse nothing, kept as reference: {inert}")
     return 0

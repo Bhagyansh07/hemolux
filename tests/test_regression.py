@@ -202,8 +202,9 @@ def test_covers_is_monotone_in_the_margin() -> None:
 
 def test_covers_is_nan_without_differences() -> None:
     """A fraction that was never computed must not read as 0.0 or 1.0."""
-    empty = BlandAltman(bias=0.0, sd_diff=0.0, loa_lower=0.0, loa_upper=0.0,
-                        proportional_slope=float("nan"), n=0)
+    empty = BlandAltman(
+        bias=0.0, sd_diff=0.0, loa_lower=0.0, loa_upper=0.0, proportional_slope=float("nan"), n=0
+    )
     assert math.isnan(empty.covers(1.0))
 
 
@@ -299,8 +300,10 @@ def test_bias_ci_brackets_the_point_estimate() -> None:
 def test_bias_ci_narrows_with_more_bootstrap_samples() -> None:
     """A wider bootstrap should not produce a wider interval. Catches a
     percentile calculation that ignores the sample count."""
-    widths = [bias_ci95(YT, YP, seed=2, n_boot=n)[1] - bias_ci95(YT, YP, seed=2, n_boot=n)[0]
-              for n in (100, 2000)]
+    widths = [
+        bias_ci95(YT, YP, seed=2, n_boot=n)[1] - bias_ci95(YT, YP, seed=2, n_boot=n)[0]
+        for n in (100, 2000)
+    ]
     assert widths[1] <= widths[0] + 1e-9
 
 

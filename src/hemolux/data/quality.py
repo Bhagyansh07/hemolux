@@ -98,7 +98,9 @@ def check_quality(
     is unreliable anyway.
     """
     if image_bgr is None or image_bgr.size == 0:
-        return QualityReport(False, "DECODE_FAIL", "We couldn't read that image.", 0.0, 0, 0, 0, None)
+        return QualityReport(
+            False, "DECODE_FAIL", "We couldn't read that image.", 0.0, 0, 0, 0, None
+        )
 
     gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
     luma = float(gray.mean())

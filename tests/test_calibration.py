@@ -187,7 +187,10 @@ class TestSoftLabel:
         """The point of label-distribution learning: Hb 10.5 sits exactly on
         centre 5, so the target is one-hot there and softens with distance."""
         for value in (5.0, 7.5, 10.5, 14.5, 17.0):
-            assert soft_label(np.array([value])).argmax(axis=1)[0] == ordinal_target_index(np.array([value]))[0]
+            assert (
+                soft_label(np.array([value])).argmax(axis=1)[0]
+                == ordinal_target_index(np.array([value]))[0]
+            )
 
     def test_agrees_with_the_hard_bin_assignment(self) -> None:
         hb = np.linspace(4.5, 17.5, 60)
@@ -272,7 +275,9 @@ class TestCalibrationScores:
         conf = np.array([1.0] * 4)
         hit = np.array([1, 1, 1, 0], dtype=bool)
         assert expected_calibration_error(conf, hit) == pytest.approx(0.25)
-        assert expected_calibration_error(np.array([1.0] * 4), np.ones(4, dtype=bool)) == pytest.approx(0.0)
+        assert expected_calibration_error(
+            np.array([1.0] * 4), np.ones(4, dtype=bool)
+        ) == pytest.approx(0.0)
 
     def test_ece_of_an_all_wrong_confident_set_is_one(self) -> None:
         conf = np.ones(8)
@@ -370,9 +375,7 @@ class TestTemperatureScale:
         is 0.25..5.0 in 60 steps, i.e. 0.0805 wide, so the tolerance is one step
         plus the sampling noise of a 4000-draw estimate."""
         true_logits, targets = self._calibrated_case(n=4000, seed=9)
-        result = temperature_scale(
-            true_logits * factor, targets, ValidationOnly(n=4000), n_grid=60
-        )
+        result = temperature_scale(true_logits * factor, targets, ValidationOnly(n=4000), n_grid=60)
         step = (5.0 - 0.25) / 59
         assert result.temperature == pytest.approx(factor, abs=3 * step)
 
@@ -549,7 +552,10 @@ class TestRiskCoverageCurve:
 
 class TestAbstention:
     def _curve(self) -> list[CoveragePoint]:
-        return [CoveragePoint(coverage=c / 10, mae=1.0, threshold=float(10 - c)) for c in range(10, 0, -1)]
+        return [
+            CoveragePoint(coverage=c / 10, mae=1.0, threshold=float(10 - c))
+            for c in range(10, 0, -1)
+        ]
 
     def test_threshold_retains_at_most_the_requested_coverage(self) -> None:
         curve = self._curve()

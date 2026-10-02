@@ -277,8 +277,7 @@ class TestStratifiedAssignments:
             assert members, f"{split} came out empty"
             anaemic = [p for p in members if label[p] != "normal"]
             assert anaemic, (
-                f"{split} contains no anaemic patient, so sensitivity cannot be "
-                f"computed on it"
+                f"{split} contains no anaemic patient, so sensitivity cannot be computed on it"
             )
 
     def test_same_seed_reproduces_the_split(self) -> None:

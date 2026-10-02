@@ -57,7 +57,9 @@ _BANNER = """
 """
 
 
-def _synth_rgb(hb: float, melanin: float, rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
+def _synth_rgb(
+    hb: float, melanin: float, rng: np.random.Generator
+) -> tuple[np.ndarray, np.ndarray]:
     """Render one fake eye ROI. Returns ``(rgb_image, ellipse_mask)``.
 
     Parameters
@@ -133,7 +135,9 @@ def _roi_masks(mask_bool: np.ndarray) -> dict[str, np.ndarray]:
     fornix_top = y0 + int(0.22 * (y1 - y0))
     fornix_bottom = y0 + int(0.45 * (y1 - y0))
     forniceal = np.zeros_like(mask_bool)
-    forniceal[fornix_top:fornix_bottom, x0 : x1 + 1] = mask_bool[fornix_top:fornix_bottom, x0 : x1 + 1]
+    forniceal[fornix_top:fornix_bottom, x0 : x1 + 1] = mask_bool[
+        fornix_top:fornix_bottom, x0 : x1 + 1
+    ]
 
     return {
         "palpebral": palpebral,
@@ -216,8 +220,10 @@ def main() -> int:
     print(f"[fixture] wrote {len(rows)} patients to {patients_dir}")
     print(f"[fixture]   India : {n_india}")
     print(f"[fixture]   Italy : {args.patients - n_india}")
-    print(f"[fixture]   Hb    : mean {table['Hb (g/dL)'].mean():.2f}, "
-          f"range {table['Hb (g/dL)'].min():.2f}-{table['Hb (g/dL)'].max():.2f}")
+    print(
+        f"[fixture]   Hb    : mean {table['Hb (g/dL)'].mean():.2f}, "
+        f"range {table['Hb (g/dL)'].min():.2f}-{table['Hb (g/dL)'].max():.2f}"
+    )
     print(f"[fixture] labels : {labels_path.name}")
     print(f"[fixture] truth  : {truth_path.name} (generator parameters, not a model)")
     print("\n[fixture] Exercise it with:")

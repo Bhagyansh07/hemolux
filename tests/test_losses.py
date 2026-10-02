@@ -91,7 +91,9 @@ class TestHuberRegressionLoss:
         assert under == pytest.approx(over)
 
     def test_zero_error_costs_nothing(self) -> None:
-        assert HuberRegressionLoss()(torch.tensor([12.3]), torch.tensor([12.3])).item() == pytest.approx(0.0)
+        assert HuberRegressionLoss()(
+            torch.tensor([12.3]), torch.tensor([12.3])
+        ).item() == pytest.approx(0.0)
 
     def test_reported_in_grams_per_decilitre(self) -> None:
         """A 1 g/dL error costs 0.5 with delta=1, which is only interpretable
@@ -132,17 +134,27 @@ class TestSoftTargetCrossEntropy:
         assert SoftTargetCrossEntropy()(logits, soft).item() == pytest.approx(expected, abs=1e-6)
 
     def test_is_non_negative(self) -> None:
-        assert SoftTargetCrossEntropy()(torch.randn(20, 5) * 10, torch.softmax(torch.randn(20, 5), -1)).item() >= 0.0
+        assert (
+            SoftTargetCrossEntropy()(
+                torch.randn(20, 5) * 10, torch.softmax(torch.randn(20, 5), -1)
+            ).item()
+            >= 0.0
+        )
 
     def test_reduces_over_the_batch_not_the_classes(self) -> None:
         """One scalar out, so it composes with the other heads' terms."""
-        assert SoftTargetCrossEntropy()(torch.randn(7, 4), torch.softmax(torch.randn(7, 4), -1)).ndim == 0
+        assert (
+            SoftTargetCrossEntropy()(torch.randn(7, 4), torch.softmax(torch.randn(7, 4), -1)).ndim
+            == 0
+        )
 
     def test_grows_when_the_target_mass_moves_to_the_wrong_bin(self) -> None:
         soft = torch.tensor([[0.85, 0.15]])
         good = (soft * 6.0).log()
         bad = torch.tensor([[0.2, 5.5]])
-        assert SoftTargetCrossEntropy()(good, soft).item() < SoftTargetCrossEntropy()(bad, soft).item()
+        assert (
+            SoftTargetCrossEntropy()(good, soft).item() < SoftTargetCrossEntropy()(bad, soft).item()
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -278,9 +290,7 @@ class TestInverseFrequencyWeights:
         inside tensor indexing."""
         w = InverseFrequencyWeights(torch.tensor([0, 1, 0, 1]), n_classes=2)
         per_sample = w(torch.tensor([0.0, 1.0]))
-        assert per_sample.tolist() == pytest.approx(
-            [w.weights[0].item(), w.weights[1].item()]
-        )
+        assert per_sample.tolist() == pytest.approx([w.weights[0].item(), w.weights[1].item()])
 
     def test_to_returns_the_tensor_not_self(self) -> None:
         """The torch idiom is ``module.to(device)`` returning the module. Returning
@@ -400,7 +410,9 @@ class TestFocalLoss:
         torch.manual_seed(3)
         logits, targets = torch.randn(8, 4), torch.randint(0, 4, (8,))
         plain = FocalLoss(gamma=2.0)(logits, targets).item()
-        weighted = FocalLoss(gamma=2.0, weights=torch.tensor([4.0, 0.25, 0.25, 0.25]))(logits, targets).item()
+        weighted = FocalLoss(gamma=2.0, weights=torch.tensor([4.0, 0.25, 0.25, 0.25]))(
+            logits, targets
+        ).item()
         assert weighted != pytest.approx(plain, rel=1e-9)
 
     def test_weights_must_cover_every_class(self) -> None:
@@ -421,18 +433,27 @@ class TestFocalLoss:
 class TestCombinedMultitaskLoss:
     def _inputs(self, n: int = 12, k: int = 6):
         torch.manual_seed(7)
-        return torch.randn(n, k), torch.softmax(torch.randn(n, k), -1), torch.randn(n), torch.randn(n) * 2 + 12
+        return (
+            torch.randn(n, k),
+            torch.softmax(torch.randn(n, k), -1),
+            torch.randn(n),
+            torch.randn(n) * 2 + 12,
+        )
 
     def test_is_the_ordinal_term_plus_a_weighted_huber_term(self) -> None:
         logits, y_soft, scalar, hb = self._inputs()
         got = combined_multitask_loss(logits, y_soft, scalar, hb, scalar_weight=0.5)
-        expected = SoftTargetCrossEntropy()(logits, y_soft) + 0.5 * smooth_l1_loss(scalar, hb, beta=1.0)
+        expected = SoftTargetCrossEntropy()(logits, y_soft) + 0.5 * smooth_l1_loss(
+            scalar, hb, beta=1.0
+        )
         assert got.item() == pytest.approx(expected.item(), rel=1e-6)
 
     def test_zero_scalar_weight_leaves_only_the_ordinal_term(self) -> None:
         logits, y_soft, scalar, hb = self._inputs()
         got = combined_multitask_loss(logits, y_soft, scalar, hb, scalar_weight=0.0)
-        assert got.item() == pytest.approx(SoftTargetCrossEntropy()(logits, y_soft).item(), rel=1e-6)
+        assert got.item() == pytest.approx(
+            SoftTargetCrossEntropy()(logits, y_soft).item(), rel=1e-6
+        )
 
     def test_doubling_the_scalar_weight_doubles_its_contribution(self) -> None:
         logits, y_soft, scalar, hb = self._inputs()

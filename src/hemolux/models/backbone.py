@@ -258,9 +258,7 @@ def probe_feature_dim(backbone: nn.Module, size: int = 224) -> int:
     with torch.no_grad():
         out = backbone(torch.zeros(1, 3, size, size))
     if out.ndim != 2:
-        raise RuntimeError(
-            f"expected a pooled (B, C) feature tensor, got shape {tuple(out.shape)}"
-        )
+        raise RuntimeError(f"expected a pooled (B, C) feature tensor, got shape {tuple(out.shape)}")
     return int(out.shape[1])
 
 

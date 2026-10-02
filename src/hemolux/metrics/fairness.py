@@ -194,9 +194,7 @@ def bias_vs_ita(
     x = np.asarray(ita_deg, dtype=np.float64).ravel()
 
     if not (a.shape == b.shape == x.shape):
-        raise ValueError(
-            f"shape mismatch: y_true {a.shape}, y_pred {b.shape}, ita {x.shape}"
-        )
+        raise ValueError(f"shape mismatch: y_true {a.shape}, y_pred {b.shape}, ita {x.shape}")
 
     ok = np.isfinite(a) & np.isfinite(b) & np.isfinite(x)
     a, b, x = a[ok], b[ok], x[ok]

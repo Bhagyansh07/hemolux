@@ -1,1 +1,1 @@
-﻿"""Research library for Hemolux."""
+"""Research library for Hemolux."""

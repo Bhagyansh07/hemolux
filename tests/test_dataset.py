@@ -174,7 +174,9 @@ def test_real_mask_stems_resolve(stem: str, expected: str) -> None:
     assert mask_matches(stem) == expected
 
 
-@pytest.mark.parametrize("stem", ["20200118_164733", "1", "20200124_202058", "T_64_20190612_092742"])
+@pytest.mark.parametrize(
+    "stem", ["20200118_164733", "1", "20200124_202058", "T_64_20190612_092742"]
+)
 def test_photograph_stems_are_not_masks(stem: str) -> None:
     """These are the real image stems. If any resolved to an ROI, ``_pick_image``
     would exclude the patient's only photograph."""
@@ -404,8 +406,15 @@ def test_number_resolves_as_the_patient_id() -> None:
 
 def test_italys_extra_unnamed_columns_do_not_break_resolution() -> None:
     columns = [
-        "Number", "Hgb", "Gender", "Age", "Note",
-        "Unnamed: 5", "Unnamed: 6", "Unnamed: 7", "Unnamed: 8",
+        "Number",
+        "Hgb",
+        "Gender",
+        "Age",
+        "Note",
+        "Unnamed: 5",
+        "Unnamed: 6",
+        "Unnamed: 7",
+        "Unnamed: 8",
     ]
     resolved = resolve_label_columns(columns)
     assert resolved["patient_id"] == "Number"

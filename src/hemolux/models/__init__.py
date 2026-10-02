@@ -1,1 +1,1 @@
-﻿"""Model backbones and heads."""
+"""Model backbones and heads."""

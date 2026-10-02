@@ -1,1 +1,1 @@
-﻿"""Region-of-interest extraction."""
+"""Region-of-interest extraction."""

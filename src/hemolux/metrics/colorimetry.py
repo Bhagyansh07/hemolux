@@ -128,9 +128,7 @@ def _spatial_mask(
         ) from exc
 
 
-def _select(
-    lab: NDArray[np.float64], sel: NDArray[np.bool_] | None
-) -> NDArray[np.float64]:
+def _select(lab: NDArray[np.float64], sel: NDArray[np.bool_] | None) -> NDArray[np.float64]:
     """Flatten an ``(H, W, 3)`` image to the ``(K, 3)`` rows a mask selects."""
     return lab.reshape(-1, 3) if sel is None else lab[sel]
 
@@ -253,7 +251,9 @@ class ColourFeatureVector:
     hsv_val: float
 
 
-def extract_colour_features(rgb: NDArray[np.ndarray], mask: NDArray[np.ndarray] | None = None) -> ColourFeatureVector:
+def extract_colour_features(
+    rgb: NDArray[np.ndarray], mask: NDArray[np.ndarray] | None = None
+) -> ColourFeatureVector:
     """Compute the full classical feature set over an ROI.
 
     ``mask`` should be the conjunctival region of interest. Passing ``None``

@@ -198,8 +198,17 @@ PREPROCESS_SPEC: dict[str, object] = {
 #: The other spellings are kept for the secondary sources.
 _LABEL_ALIASES: dict[str, tuple[str, ...]] = {
     "patient_id": (
-        "number", "patientid", "patient", "id", "subject", "subjectid",
-        "code", "casename", "patientnumber", "recnumber", "n",
+        "number",
+        "patientid",
+        "patient",
+        "id",
+        "subject",
+        "subjectid",
+        "code",
+        "casename",
+        "patientnumber",
+        "recnumber",
+        "n",
     ),
     "hb": ("hb", "hgb", "hbgdl", "hemoglobin", "haemoglobin", "hbvalue", "hbconc"),
     "sex": ("sex", "gender", "s", "sexo"),
@@ -219,7 +228,9 @@ def _normalise_key(text: str) -> str:
 #: ``Italy.xlsx`` patient 93 carries ``'_'`` with the note "Hgb not available",
 #: and is also flagged ``ELIMINATO`` in an unnamed column. Anything in this set is
 #: a missing measurement, never a zero.
-HB_MISSING_MARKERS: frozenset[str] = frozenset({"", "_", "-", "--", "n/a", "na", "nan", "none", "null"})
+HB_MISSING_MARKERS: frozenset[str] = frozenset(
+    {"", "_", "-", "--", "n/a", "na", "nan", "none", "null"}
+)
 
 
 def parse_hb(value: object) -> float | None:
@@ -258,7 +269,9 @@ def parse_hb(value: object) -> float | None:
         head, _, tail = text.partition(",")
         if len(tail) != 1 and head.lstrip("+-").isdigit() and tail.isdigit():
             # '1,234' / '1,234,567' -- a grouped thousands separator.
-            raise ValueError(f"haemoglobin {text!r} looks like a thousands separator, not a decimal")
+            raise ValueError(
+                f"haemoglobin {text!r} looks like a thousands separator, not a decimal"
+            )
         text = f"{head}.{tail}"
 
     try:
@@ -273,7 +286,14 @@ def parse_hb(value: object) -> float | None:
 #: the one with no Hb, so the two signals agree here. Checked anyway, because a
 #: dataset can mark a record withdrawn while keeping its measurement, and
 #: training on a withdrawn record is worse than training without its label.
-EXCLUDED_MARKERS: tuple[str, ...] = ("eliminato", "eliminata", "excluded", "exclude", "removed", "drop")
+EXCLUDED_MARKERS: tuple[str, ...] = (
+    "eliminato",
+    "eliminata",
+    "excluded",
+    "exclude",
+    "removed",
+    "drop",
+)
 
 
 def is_excluded(row: dict[str, object]) -> str | None:
@@ -433,8 +453,8 @@ def _edit_distance(a: str, b: str, cap: int = 2) -> int:
         for j, cb in enumerate(b, 1):
             current.append(
                 min(
-                    previous[j] + 1,           # deletion
-                    current[j - 1] + 1,        # insertion
+                    previous[j] + 1,  # deletion
+                    current[j - 1] + 1,  # insertion
                     previous[j - 1] + (ca != cb),  # substitution
                 )
             )
@@ -698,7 +718,8 @@ def build_records(
         raise FileNotFoundError(f"dataset root does not exist: {root}")
 
     site_dirs = [
-        d for d in sorted(p for p in root.iterdir() if p.is_dir())
+        d
+        for d in sorted(p for p in root.iterdir() if p.is_dir())
         if _normalise_site(d.name) in SITES
     ]
     if not site_dirs:
@@ -1042,7 +1063,9 @@ class ConjunctivaDataset:
         kept = [r for r in self.records if r.patient_id in wanted]
         missing = wanted - {r.patient_id for r in kept}
         if missing:
-            raise KeyError(f"{len(missing)} patient ids are not in this dataset, e.g. {sorted(missing)[0]}")
+            raise KeyError(
+                f"{len(missing)} patient ids are not in this dataset, e.g. {sorted(missing)[0]}"
+            )
         return ConjunctivaDataset(
             kept,
             roi=self.roi,

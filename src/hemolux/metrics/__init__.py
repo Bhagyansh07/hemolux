@@ -1,1 +1,1 @@
-﻿"""Evaluation metrics. Every reported number comes from this package."""
+"""Evaluation metrics. Every reported number comes from this package."""

@@ -256,18 +256,12 @@ def site_holdout_folds(
     # the one the corpus validator counts.
     unknown = sorted({p for p in patient_ids if p not in site_of})
     if unknown:
-        raise ValueError(
-            f"{len(unknown)} patients have no site label, first: {unknown[0]!r}"
-        )
+        raise ValueError(f"{len(unknown)} patients have no site label, first: {unknown[0]!r}")
     blank = sorted(p for p in patient_ids if not str(site_of.get(p, "")).strip())
     if blank:
-        raise ValueError(
-            f"{len(blank)} patients have a blank site label, first: {blank[0]!r}"
-        )
+        raise ValueError(f"{len(blank)} patients have a blank site label, first: {blank[0]!r}")
     if len(found) < 2:
-        raise ValueError(
-            f"site holdout needs >= 2 sites, found {sorted(found)}"
-        )
+        raise ValueError(f"site holdout needs >= 2 sites, found {sorted(found)}")
     for train_site, test_site in ((sites[0], sites[1]), (sites[1], sites[0])):
         train = tuple(sorted(p for p in patient_ids if site_of.get(p) == train_site))
         test = tuple(sorted(p for p in patient_ids if site_of.get(p) == test_site))

@@ -36,6 +36,12 @@ jobs:
       # parallelism gains.
       OMP_NUM_THREADS: "2"
       PYTHONHASHSEED: "0"
+      # Leave decoder diagnostics alone. hemolux.imagemeta filters one known-bad
+      # libpng line by default, because on the author's machine 639 corrupt mask
+      # ICC profiles bury the output. A CI runner has no such corpus, and a real
+      # decode failure should be visible rather than filtered, so the filter is
+      # switched off here rather than trusted.
+      HEMOLUX_STRICT_IMAGE_LOG: "1"
 
     steps:
       - uses: actions/checkout@v4
@@ -48,11 +54,16 @@ jobs:
       # adds several gigabytes to every run for code paths this project never
       # executes. Installing it first also stops pip from backtracking over the
       # exact pins in pyproject.toml.
+      #
+      # One line, no backslash continuation. This job also runs on
+      # windows-latest, where the shell is PowerShell, and a trailing backslash
+      # is not a line continuation there -- pip received the two arguments
+      # 'torch==2.14.1' and '\\', and failed with "Directory '\\' is not
+      # installable". The failure was only ever visible on the Windows leg.
       - name: Install PyTorch from the CPU index
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --index-url https://download.pytorch.org/whl/cpu \
-            torch==2.14.1 torchvision==0.29.1
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1 torchvision==0.29.1
 
       - name: Install the package
         run: python -m pip install -e ".[dev]"
@@ -85,8 +96,7 @@ jobs:
       - name: Install PyTorch from the CPU index
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --index-url https://download.pytorch.org/whl/cpu \
-            torch==2.14.1 torchvision==0.29.1
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1 torchvision==0.29.1
       - name: Install build tooling
         run: python -m pip install build
       - name: Build the wheel and sdist

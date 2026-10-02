@@ -39,12 +39,10 @@ mask shape to raw image shape would report every patient as broken.
 from __future__ import annotations
 
 import argparse
-import contextlib
-import os
 import statistics as st
 import sys
 from collections import Counter
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable
 from pathlib import Path
 
 # Allow running straight from a checkout without an editable install.
@@ -64,6 +62,7 @@ from hemolux.data.dataset import (
     load_rgb,
 )
 from hemolux.data.splits import severity_bin, site_holdout_folds
+from hemolux.imagemeta import quiet_image_decoder
 
 SITES = ("India", "Italy")
 EXPECTED_SEX = {"M", "F"}
@@ -79,28 +78,6 @@ ROI_AREA_MAX = 0.85
 #: How far a mask's aspect ratio may differ from its image's before the pairing is
 #: declared broken rather than merely inconsistent.
 ASPECT_TOLERANCE = 0.02
-
-
-@contextlib.contextmanager
-def _silence_icc_warnings() -> Iterator[None]:
-    """Drop libpng's iCCP chatter for the duration of the block.
-
-    The released masks are PNG files whose authors' tooling left a malformed iCCP
-    chunk behind. A mask is binary region data with no colour profile to manage, so
-    the warning is noise, and 96 lines of it drown out the report this script
-    exists to produce. Redirecting the file descriptor is the only way to stop
-    libpng, which writes from C and does not consult Python's warning filters.
-    """
-    sys.stderr.flush()
-    saved = os.dup(2)
-    devnull = os.open(os.devnull, os.O_WRONLY)
-    os.dup2(devnull, 2)
-    try:
-        yield
-    finally:
-        os.dup2(saved, 2)
-        os.close(devnull)
-        os.close(saved)
 
 
 class Report:
@@ -368,9 +345,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--no-pixels", action="store_true", help="skip all image decoding")
     parser.add_argument(
-        "--allow-icc-warnings",
+        "--strict-image-log",
         action="store_true",
-        help="let libpng's iCCP warnings through instead of suppressing them",
+        help="let libpng's iCCP warnings through instead of filtering that one line",
     )
     return parser.parse_args(argv)
 
@@ -418,7 +395,11 @@ def main(argv: list[str] | None = None) -> int:
     rep = Report()
     summarise(records)
     print()
-    with contextlib.nullcontext() if args.allow_icc_warnings else _silence_icc_warnings():
+    # The masks carry a malformed iCCP chunk, so libpng writes one line per file
+    # from C, where no Python logging filter can reach it. quiet_image_decoder
+    # captures the descriptor and relays everything except that one line, so a
+    # genuine decode failure still reaches the terminal.
+    with quiet_image_decoder(force=args.strict_image_log):
         check_frames(records, rep, read_pixels=not args.no_pixels)
         check_masks(records, rep, read_pixels=not args.no_pixels)
     check_identities(records, rep)

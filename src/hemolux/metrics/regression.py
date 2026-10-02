@@ -18,7 +18,7 @@ result. Per ``brain/13_TESTING.md`` §3, no bare number is ever reported.
 from __future__ import annotations
 
 import math
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 
 import numpy as np
 from numpy.typing import NDArray
@@ -109,17 +109,38 @@ class BlandAltman:
     loa_upper: float
     proportional_slope: float
     n: int
+    #: Per-pair differences (``y_pred - y_true``). Kept because ``covers`` needs
+    #: them and because a limits-of-agreement result that cannot be checked
+    #: against its own differences is not auditable.
+    #:
+    #: Excluded from ``repr``, ``eq`` and :meth:`to_dict`: it is derived from the
+    #: inputs, not part of the result, and ``asdict`` would deepcopy the whole
+    #: array into every serialised row.
+    diffs: _FloatArr = field(
+        default_factory=lambda: np.empty(0, dtype=np.float64),
+        repr=False,
+        compare=False,
+    )
 
     def covers(self, margin: float) -> float:
-        """Fraction of predictions within ``+/- margin`` g/dL of the truth."""
-        return float(np.mean(np.abs(self._diffs) <= margin))
+        """Fraction of predictions within ``+/- margin`` g/dL of the truth.
 
-    @property
-    def _diffs(self) -> _FloatArr:  # pragma: no cover - overridden below
-        raise NotImplementedError
+        Returns NaN if the differences were not supplied, rather than reporting
+        0.0 or 1.0 for a fraction that was never computed.
+        """
+        if self.diffs.size == 0:
+            return float("nan")
+        return float(np.mean(np.abs(self.diffs) <= margin))
 
     def to_dict(self) -> dict[str, float | int]:
-        return asdict(self)
+        return {
+            "bias": self.bias,
+            "sd_diff": self.sd_diff,
+            "loa_lower": self.loa_lower,
+            "loa_upper": self.loa_upper,
+            "proportional_slope": self.proportional_slope,
+            "n": self.n,
+        }
 
 
 def bland_altman(y_true: _FloatArr, y_pred: _FloatArr) -> BlandAltman:
@@ -131,6 +152,18 @@ def bland_altman(y_true: _FloatArr, y_pred: _FloatArr) -> BlandAltman:
 
     The returned ``covers(1.0)`` is therefore the single most defensible number
     in the whole project.
+
+    Note
+    ----
+    An earlier version declared the differences as a ``@property`` that raised
+    ``NotImplementedError``, then tried to populate it with
+    ``object.__setattr__``. A property is a data descriptor, so it takes
+    precedence over the instance dictionary, and a frozen dataclass has no way
+    to assign one at all -- ``bland_altman`` raised
+    ``AttributeError: property '_diffs' has no setter`` before returning
+    anything. Because ``regression_report`` calls this function, the crash took
+    the whole reporting path down with it, and 159 passing tests had not caught
+    it: this module had never been executed. ``diffs`` is now a real field.
     """
     a, b = _clean(y_true, y_pred)
     diff = b - a
@@ -144,16 +177,15 @@ def bland_altman(y_true: _FloatArr, y_pred: _FloatArr) -> BlandAltman:
     else:
         slope = float("nan")
 
-    result = BlandAltman(
+    return BlandAltman(
         bias=bias,
         sd_diff=sd,
         loa_lower=bias - 1.96 * sd,
         loa_upper=bias + 1.96 * sd,
         proportional_slope=slope,
         n=int(diff.size),
+        diffs=diff,
     )
-    object.__setattr__(result, "_diffs", diff)  # type: ignore[attr-defined]
-    return result
 
 
 def bias_ci95(y_true: _FloatArr, y_pred: _FloatArr, *, seed: int = 42, n_boot: int = 2000) -> tuple[float, float]:
@@ -216,8 +248,10 @@ def regression_report(y_true: _FloatArr, y_pred: _FloatArr) -> RegressionReport:
         bias=ba.bias,
         loa_lower=ba.loa_lower,
         loa_upper=ba.loa_upper,
-        within_1=float(np.mean(np.abs(a - b) <= 1.0)),
-        within_2=float(np.mean(np.abs(a - b) <= 2.0)),
+        # Via covers(), not a second inline computation, so the report and the
+        # public method cannot disagree about the same number.
+        within_1=ba.covers(1.0),
+        within_2=ba.covers(2.0),
     )
 
 

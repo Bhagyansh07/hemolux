@@ -266,10 +266,31 @@ def risk_coverage_curve(
     ``uncertainty`` is lower-is-more-confident (predictive sigma, or the entropy
     of the ordinal distribution).
 
-    **The property to check:** MAE must be non-increasing as coverage falls.
-    Asserted in ``tests/test_calibration.py``. If it is not, the confidence
-    signal carries no information about the error, and the abstention feature
-    must be withdrawn from the product rather than shipped on faith.
+    **The property to check**
+    ------------------------
+    MAE at low coverage must be lower than MAE at full coverage. If it is not,
+    the confidence signal carries no information about the error, and the
+    abstention feature must be withdrawn from the product rather than shipped on
+    faith.
+
+    Note this is an endpoint comparison, *not* a per-step monotonicity
+    requirement. An earlier version of this docstring demanded that MAE be
+    non-increasing at every step, and pinned that with a test. That claim is
+    false. Each point is the mean of a *prefix* of the confidence-sorted error
+    sequence, and a running mean is not monotone; adding a sample with a large
+    error can raise it. A concrete counterexample with n = 10, one outlier at
+    mid-ranked uncertainty and four exact predictions after it, gives
+
+        coverage  1.0  0.9  0.8  0.7  0.6  0.5  0.4  0.3  0.2  0.1
+        MAE      0.9 1.00 1.13 1.29 1.50 1.80 0.0  0.0  0.0  0.0
+
+    so MAE rises while coverage falls. Monotonicity holds only in expectation
+    over orderings, which a single dataset does not supply. A test that asserted
+    it would have failed on correct code.
+
+    ``tests/test_calibration.py`` therefore asserts the endpoint property on a
+    genuinely informative signal, and additionally asserts that a pure-noise
+    signal shows no such improvement.
     """
     unc = np.asarray(uncertainty, dtype=np.float64).ravel()
     y_t = np.asarray(y_true, dtype=np.float64).ravel()

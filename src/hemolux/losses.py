@@ -61,12 +61,33 @@ class InverseFrequencyWeights:
     Computed from the **training split only**. Computing weights from the full
     dataset leaks test-set class frequencies into training, which is a subtle and
     very common leak.
+
+    Normalised to unit mean
+    -----------------------
+    The raw inverse frequency ``1 / f_c`` does not have mean 1. Weighted by the
+    class frequencies it averages to exactly the number of classes:
+
+        sum_c  f_c * (1 / f_c)  =  K
+
+    Measured on this project's class distributions, the unnormalised weights had
+    mean 2.0 for a 2-class head, 4.0 for the 4-way severity head and 12.0 for
+    the 12-bin ordinal head. That is a silent rescaling of the loss, so the same
+    learning rate meant something different in every head, and the C1 comparison
+    between heads would have been confounded by the loss scale rather than by the
+    head.
+
+    Dividing by that mean makes the weighted mean 1.0, so weighting changes *which*
+    samples are emphasised without changing the effective step size.
     """
 
     def __init__(self, targets: Tensor, *, eps: float = 1e-6) -> None:
+        if targets.numel() == 0:
+            raise ValueError("cannot compute class weights from an empty tensor")
         counts = torch.bincount(targets.long(), minlength=int(targets.max().item()) + 1)
         freq = counts.float() / counts.sum().clamp_min(1)
-        self.weights = 1.0 / (freq + eps)
+        raw = 1.0 / (freq + eps)
+        # freq @ raw == K, so this divides the mean weight down to 1.
+        self.weights = raw / (freq @ raw).clamp_min(eps)
 
     def __call__(self, targets: Tensor) -> Tensor:
         return self.weights.to(targets.device)[targets]

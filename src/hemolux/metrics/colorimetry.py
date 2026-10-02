@@ -367,7 +367,7 @@ def conjunctival_pigmentation(lab_mean: NDArray[np.float64]) -> float:
     plausible ``b*`` range for ocular tissue rather than a fitted parameter, so
     it cannot silently absorb a signal of its own. It is a **proxy**: it is
     validated against a manual 3-level annotation, and the agreement between
-    the two is reported in ``FAIRNESS_REPORT.md``.
+    the two is reported in the fairness section of ``EVALS.md``.
     """
     b_star = float(lab_mean[2])
     if not np.isfinite(b_star):

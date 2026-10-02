@@ -45,7 +45,7 @@ class SoftTargetCrossEntropy(nn.Module):
     """Cross-entropy against a soft distribution over ordered bins.
 
     ``y_true`` is an ``(N, K)`` row-stochastic matrix from
-    :func:`hemoscan.metrics.calibration.soft_label`. Because it is not one-hot,
+    :func:`hemolux.metrics.calibration.soft_label`. Because it is not one-hot,
     the optimal prediction is the soft target itself, which is exactly the
     property that keeps the output calibrated.
     """

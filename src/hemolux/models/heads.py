@@ -34,7 +34,7 @@ from __future__ import annotations
 import torch
 from torch import Tensor, nn
 
-from ..metrics.calibration import HB_BIN_CENTRES, N_BINS, expected_hb, soft_label
+from hemolux.metrics.calibration import HB_BIN_CENTRES, N_BINS, expected_hb, soft_label
 
 
 class BinaryHead(nn.Module):
@@ -146,18 +146,17 @@ def build_head(name: str, in_features: int) -> nn.Module:
 
 
 def soft_targets_from_hb(hb: Tensor, sigma: float = 0.6) -> Tensor:
-    """Torch-side wrapper over :func:`hemoscan.metrics.calibration.soft_label`.
+    """Torch-side wrapper over :func:`hemolux.metrics.calibration.soft_label`.
 
     Kept as a thin shim so training code never has to round-trip through numpy,
     and so the bin edges have exactly one definition.
     """
-    import numpy as np
 
     arr = soft_label(hb.detach().cpu().numpy(), sigma=sigma)
     return torch.tensor(arr, dtype=torch.float32, device=hb.device)
 
 
-def decode_numpy(logits: "object") -> "object":
+def decode_numpy(logits: object) -> object:
     """NumPy decode helper for evaluation code."""
     import numpy as np
 

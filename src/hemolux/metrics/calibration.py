@@ -26,16 +26,17 @@ Fitting on the test set is made impossible by construction, not by convention:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import pairwise
 
 import numpy as np
 from numpy.typing import NDArray
 
 _FloatArr = NDArray[np.float64]
 
-#: Ordinal bin centres in g/dL. Must match ``src/hemoscan/models/heads.py``.
+#: Ordinal bin centres in g/dL. Must match ``src/hemolux/models/heads.py``.
 HB_BIN_EDGES = (4.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 18.0)
 HB_BIN_CENTRES = tuple(
-    (lo + hi) / 2.0 for lo, hi in zip(HB_BIN_EDGES[:-1], HB_BIN_EDGES[1:], strict=True)
+    (lo + hi) / 2.0 for lo, hi in pairwise(HB_BIN_EDGES)
 )
 N_BINS = len(HB_BIN_CENTRES)
 
@@ -282,7 +283,7 @@ def risk_coverage_curve(
 
     points: list[CoveragePoint] = []
     for frac in np.linspace(1.0, 0.1, n_points):
-        k = max(1, int(round(frac * n)))
+        k = max(1, round(frac * n))
         points.append(
             CoveragePoint(
                 coverage=round(k / n, 4),

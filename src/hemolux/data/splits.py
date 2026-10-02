@@ -147,7 +147,7 @@ def patient_disjoint_kfold(
         test = tuple(shuffled[i] for i in test_idx)
         remaining = [pid for i, pid in enumerate(shuffled) if i not in set(test_idx)]
 
-        n_val = max(1, int(round(len(remaining) * val_fraction)))
+        n_val = max(1, round(len(remaining) * val_fraction))
         val = tuple(remaining[:n_val])
         train = tuple(remaining[n_val:])
         folds.append(Fold(name=f"fold{k}", train=train, val=val, test=test))
@@ -176,8 +176,8 @@ def stratified_assignments(
     for pid, sev in zip(ids, (str(s) for s in severity), strict=True):
         by_severity.setdefault(sev, []).append(pid)
 
-    n_val = max(1, int(round(len(ids) * val_fraction)))
-    n_test = max(1, int(round(len(ids) * val_fraction)))
+    n_val = max(1, round(len(ids) * val_fraction))
+    n_test = max(1, round(len(ids) * val_fraction))
 
     val: list[str] = []
     test: list[str] = []
@@ -197,9 +197,9 @@ def stratified_assignments(
             test.append(pid)
 
     train = [p for p in ids if p not in set(val) | set(test)]
-    assignments = {p: Split.TRAIN for p in train}
-    assignments.update({p: Split.VAL for p in val})
-    assignments.update({p: Split.TEST for p in test})
+    assignments = dict.fromkeys(train, Split.TRAIN)
+    assignments.update(dict.fromkeys(val, Split.VAL))
+    assignments.update(dict.fromkeys(test, Split.TEST))
     return assignments
 
 
@@ -239,6 +239,15 @@ def site_holdout_folds(
     distribution.
     """
     found = {s for s in site_of.values() if s}
+    unknown = sorted({p for p in patient_ids if p not in site_of})
+    if unknown:
+        raise ValueError(
+            f"{len(unknown)} patients have no site label, first: {unknown[0]!r}"
+        )
+    if len(found) < 2:
+        raise ValueError(
+            f"site holdout needs >= 2 sites, found {sorted(found)}"
+        )
     for train_site, test_site in ((sites[0], sites[1]), (sites[1], sites[0])):
         train = tuple(sorted(p for p in patient_ids if site_of.get(p) == train_site))
         test = tuple(sorted(p for p in patient_ids if site_of.get(p) == test_site))

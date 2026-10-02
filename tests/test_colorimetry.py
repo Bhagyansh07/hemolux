@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from hemoscan.metrics.colorimetry import (
+from hemolux.metrics.colorimetry import (
     conjunctival_pigmentation,
     erythema_index,
     extract_colour_features,

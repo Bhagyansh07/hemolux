@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "hemoscan"
+name = "hemolux"
 version = "0.1.0"
 description = "Non-invasive haemoglobin screening from smartphone tissue images, with a skin-tone fairness audit."
 readme = "README.md"
@@ -40,10 +40,10 @@ dev = [
 ]
 
 [project.scripts]
-hemoscan = "hemoscan.cli:main"
+hemolux = "hemolux.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/hemoscan"]
+packages = ["src/hemolux"]
 
 [tool.ruff]
 line-length = 100
@@ -75,7 +75,9 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["ARG001", "ARG002"]
+# N802: descriptive test names like test_white_is_L100_neutral read better with
+# the symbolic capitals than as test_white_is_l100_neutral.
+"tests/*" = ["ARG001", "ARG002", "N802"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -87,7 +89,7 @@ ignore_missing_imports = true
 warn_unused_configs = true
 warn_redundant_casts = true
 no_implicit_optional = true
-files = ["src/hemoscan"]
+files = ["src/hemolux"]
 
 [[tool.mypy.overrides]]
 module = ["timm.*", "cv2.*", "albumentations.*"]

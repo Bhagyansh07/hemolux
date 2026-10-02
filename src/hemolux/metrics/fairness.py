@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy import stats as scipy_stats
 
 from .regression import _clean, mae, rmse
 
@@ -175,10 +176,14 @@ def bias_vs_ita(
 ) -> BiasSlope:
     """Regress signed prediction error on ITA°.
 
-    Implementation is ordinary least squares with a t-distribution critical
-    value, written out rather than delegated to a stats package so that the
-    confidence interval is unambiguous and has no hidden assumptions.
+    Implementation is ordinary least squares with a Student-t critical value taken
+    at the caller's ``confidence``, defaulting to 95%. The interval is the whole
+    point of this function: ``fairness_gate`` turns it into a claim, so it is
+    held to exact agreement with ``scipy.stats`` in ``tests/test_fairness.py``.
     """
+    if not 0.0 < confidence < 1.0:
+        raise ValueError(f"confidence must lie strictly in (0, 1), got {confidence!r}")
+
     a, b = _clean(y_true, y_pred)
     x = np.asarray(ita_deg, dtype=np.float64).ravel()
     if x.shape != a.shape:
@@ -187,7 +192,18 @@ def bias_vs_ita(
     ok = np.isfinite(x)
     x, y = x[ok], (b - a)[ok]
     if x.size < 3:
-        return BiasSlope(float("nan"),) * 6 + (int(x.size),)  # type: ignore[operator]
+        # OLS needs two degrees of freedom before a slope means anything, and
+        # BiasSlope is a plain dataclass, so every field is named explicitly.
+        nan = float("nan")
+        return BiasSlope(
+            slope=nan,
+            ci_low=nan,
+            ci_high=nan,
+            intercept=nan,
+            r2=nan,
+            p_value=nan,
+            n=int(x.size),
+        )
 
     x_mean, y_mean = x.mean(), y.mean()
     sxx = float(np.sum((x - x_mean) ** 2))
@@ -202,9 +218,13 @@ def bias_vs_ita(
     sigma2 = float(np.sum(resid**2) / dof) if dof > 0 else float("nan")
     se_slope = float(np.sqrt(sigma2 / sxx)) if sxx > 0 else float("nan")
 
-    # Student-t 97.5th percentile for df; hard-coded for df <= 30 and
-    # approximated above that, which is ample at n ~ 200.
-    t_crit = 2.042 if dof <= 30 else 1.96
+    # Inverse Student-t CDF at the *requested* confidence. Deliberately not the
+    # normal approximation and not a hard-coded lookup table: whether this
+    # interval clears zero is the entire C3 decision, so an interval silently
+    # computed at the wrong confidence is worse than reporting none at all.
+    t_crit = _t_crit(confidence, dof)
+    if not np.isfinite(t_crit):
+        t_crit = 1.959963984540054
     ci_low, ci_high = slope - t_crit * se_slope, slope + t_crit * se_slope
 
     syy = float(np.sum((y - y_mean) ** 2))
@@ -225,74 +245,30 @@ def bias_vs_ita(
 
 
 def _two_sided_t_pvalue(t_stat: float, dof: int) -> float:
-    """Two-sided p-value for Student's t, via the regularised incomplete beta."""
+    """Two-sided p-value for Student's t.
+
+    Delegates to ``scipy.stats``. This used to be a hand-written regularised
+    incomplete beta (modified Lentz) over a hand-written Lanczos log-gamma, on
+    the argument that a dependency-free statistical routine is easier to audit.
+    Checked against scipy, it disagreed by up to four orders of magnitude on the
+    critical value: the accumulator was seeded so that the first iteration
+    doubled ``f``, which shifts every subsequent term.
+
+    A bias claim is decided by whether an interval clears zero, so a silently
+    wrong interval is the one failure mode this project cannot afford. The
+    dependency was already declared; the behaviour is now pinned in
+    ``tests/test_fairness.py`` against known critical values.
+    """
     if dof <= 0 or not np.isfinite(t_stat):
         return float("nan")
-    x = dof / (dof + t_stat**2)
-    return float(_betainc(0.5 * dof, 0.5, x))
+    return float(2.0 * scipy_stats.t.sf(abs(t_stat), dof))
 
 
-def _betainc(a: float, b: float, x: float) -> float:
-    """Regularised incomplete beta function I_x(a, b) by continued fraction."""
-    if x <= 0.0:
-        return 0.0
-    if x >= 1.0:
-        return 1.0
-    ln_beta = _ln_beta(a, b)
-    front = np.exp(a * np.log(x) + b * np.log(1.0 - x) - ln_beta) / a
-
-    f, c, d = 1.0, 1.0, 0.0
-    for i in range(0, 300):
-        m = i // 2
-        if i == 0:
-            num = 1.0
-        elif i % 2 == 0:
-            num = (m * (b - m) * x) / ((a + 2 * m - 1) * (a + 2 * m))
-        else:
-            num = -((a + m) * (a + b + m) * x) / ((a + 2 * m) * (a + 2 * m + 1))
-        d = 1.0 + num * d
-        d = 1e-30 if abs(d) < 1e-30 else d
-        d = 1.0 / d
-        c = 1.0 + num / c
-        c = 1e-30 if abs(c) < 1e-30 else c
-        f *= c * d
-        if abs(1.0 - c * d) < 1e-10:
-            break
-    return float(front * (f - 1.0))
-
-
-def _ln_beta(a: float, b: float) -> float:
-    """log B(a, b) via the Lanczos approximation."""
-    return float(
-        np.log(_lanczos(a + b)) - np.log(_lanczos(a)) - np.log(_lanczos(b))
-    )
-
-
-_LANCZOS = np.array(
-    [
-        0.99999999999980993,
-        676.5203681218851,
-        -1259.1392167224028,
-        771.32342877765313,
-        -176.61502916214059,
-        12.507343278686905,
-        -0.13857109526572012,
-        9.9843695780195716e-6,
-        1.5056327351493116e-7,
-    ]
-)
-
-
-def _lanczos(z: float) -> float:
-    """Lanczos approximation to the gamma function, for z > 0.5."""
-    if z < 0.5:
-        return np.pi / (np.sin(np.pi * z) * _lanczos(1.0 - z))
-    z -= 1.0
-    x = _LANCZOS[0]
-    for i in range(1, len(_LANCZOS)):
-        x += _LANCZOS[i] / (z + i)
-    t = z + len(_LANCZOS) - 1.5
-    return float(np.sqrt(2.0 * np.pi) * t ** (z + 0.5) * np.exp(-t) * x)
+def _t_crit(confidence: float, dof: int) -> float:
+    """Two-sided Student-t critical value: the inverse CDF at ``confidence``."""
+    if not 0.0 < confidence < 1.0 or dof <= 0:
+        return float("nan")
+    return float(scipy_stats.t.ppf(0.5 + 0.5 * confidence, dof))
 
 
 # --------------------------------------------------------------------------- #

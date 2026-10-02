@@ -26,12 +26,12 @@ _ROOT = Path(__file__).resolve().parents[2]
 class Paths:
     """Resolved filesystem layout.
 
-    ``data_root`` is overridable via ``HEMOSCAN_DATA_ROOT`` so that CI and the
+    ``data_root`` is overridable via ``HEMOLUX_DATA_ROOT`` so that CI and the
     builder can use the same code against different trees.
     """
 
     data_root: Path = field(
-        default_factory=lambda: Path(os.environ.get("HEMOSCAN_DATA_ROOT", _ROOT / "data"))
+        default_factory=lambda: Path(os.environ.get("HEMOLUX_DATA_ROOT", _ROOT / "data"))
     )
 
     @property
@@ -95,7 +95,7 @@ def ensure_dirs() -> None:
 # --------------------------------------------------------------------------- #
 
 #: Master seed. Every experiment records it so a run can be repeated exactly.
-SEED = int(os.environ.get("HEMOSCAN_SEED", "42"))
+SEED = int(os.environ.get("HEMOLUX_SEED", "42"))
 
 
 def set_seed(seed: int = SEED) -> None:
@@ -127,7 +127,7 @@ def configure_torch() -> None:
     measurably slower per step due to thread contention, and more than 8 gave no
     further gain.
     """
-    threads = int(os.environ.get("HEMOSCAN_THREADS", "8"))
+    threads = int(os.environ.get("HEMOLUX_THREADS", "8"))
     import torch
 
     torch.set_num_threads(max(1, threads))

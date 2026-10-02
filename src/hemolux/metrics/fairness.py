@@ -1,8 +1,8 @@
 """Fairness audit: does the model's error depend on the patient's pigmentation?
 
-This module implements the C3 and C4 analysis in ``brain/01_PRD.md`` §7. It is
-the part of the project that no published conjunctival-pallor model we found
-performs, and it is why the project exists.
+This module implements claims C3 and C4. It is the part of the project that no
+published conjunctival-pallor model we found performs, and it is why the
+project exists. The claims are defined in ``README.md``.
 
 The hypothesis under test
 -------------------------

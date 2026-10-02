@@ -1,6 +1,6 @@
 """Model heads.
 
-The heads implement experiment C1 in ``brain/01_PRD.md`` §7: does a continuous
+The heads implement claim C1: does a continuous
 haemoglobin estimate with an ordinal-aware target beat a binarised anaemia flag?
 
 Four heads share one backbone so the comparison is controlled:
@@ -77,7 +77,7 @@ class OrdinalHead(nn.Module):
 
     Outputs unnormalised logits; the loss applies log-softmax. Keeping softmax
     out of the module means temperature scaling stays possible downstream, which
-    requires raw logits (``brain/13_TESTING.md`` §2).
+    is only defined on logits.
     """
 
     def __init__(self, in_features: int, n_bins: int = N_BINS) -> None:

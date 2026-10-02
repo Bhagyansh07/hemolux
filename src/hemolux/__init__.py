@@ -1,7 +1,8 @@
 """Hemolux — non-invasive haemoglobin screening from smartphone tissue images.
 
 A screening and triage-support research prototype. Not a diagnostic device.
-See ``brain/01_PRD.md`` §2 for the intended-use statement.
+See ``ETHICS.md`` for the intended-use statement and the limits of what
+this tool is allowed to claim.
 """
 
 from __future__ import annotations

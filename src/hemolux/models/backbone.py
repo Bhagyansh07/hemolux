@@ -63,7 +63,7 @@ __all__ = [
     "resolve_device",
 ]
 
-#: Backbones small enough to ship to a browser. D-001: the ONNX graph is
+#: Backbones small enough to ship to a browser. The ONNX graph is
 #: downloaded by the user on a phone connection, so its size is a product
 #: constraint, not only an engineering one. Actual exported sizes are printed by
 #: ``scripts/export_onnx.py`` and recorded in ``EVALS.md``; they are not

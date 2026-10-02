@@ -198,9 +198,9 @@ def temperature_scale(
 ) -> TemperatureResult:
     """Fit a single temperature by grid search, minimising validation NLL.
 
-    Requires :class:`ValidationOnly`. ``brain/13_TESTING.md`` §2 asserts that
-    passing anything else raises, because a temperature fitted on the test split
-    invalidates every calibration number downstream of it.
+    Requires :class:`ValidationOnly`; passing anything else raises, because a
+    temperature fitted on the test split invalidates every calibration number
+    downstream of it. Nothing downstream would notice.
 
     Grid search rather than L-BFGS on purpose: the objective is smooth and
     one-dimensional, a grid is trivially reproducible, and there is no optimiser

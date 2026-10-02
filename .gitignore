@@ -1,4 +1,4 @@
-# --- secrets: never commit these (brain/10_SECURITY.md §7) ---
+# --- secrets: never commit these ---
 .env
 .env.*
 *.pem
@@ -6,8 +6,7 @@
 kaggle.json
 *_rsa.pem
 
-# --- research data: contains identifiable body images + lab values ---
-# brain/06_DATA_INGESTION_SPEC.md §3. These are NEVER pushed.
+# --- research data: identifiable body images and lab values, never pushed ---
 data/raw/
 data/interim/
 data/processed/
@@ -16,7 +15,7 @@ data/synthetic/
 !artifacts/**/*.zip
 
 # --- derived artifacts: feature caches, weights, scratch ---
-# brain/12_CICD_GITHUB_ACTIONS.md §6. Weights ship as GitHub Release assets.
+# Weights ship as GitHub Release assets, never as committed files.
 #
 # Written as `artifacts/*` rather than `artifacts/` on purpose: git cannot
 # re-include a path whose parent *directory* is excluded, so `artifacts/` would

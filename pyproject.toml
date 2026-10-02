@@ -13,7 +13,7 @@ authors = [{ name = "Bhagyansh" }]
 
 # Pinned to versions verified working together on Windows + Python 3.13.
 # torch/torchvision must come from the CPU index, not PyPI, or pip pulls
-# multi-GB CUDA wheels. See brain/20_ENV_SETUP.md §2.
+# multi-GB CUDA wheels. See CONTRIBUTING.md.
 dependencies = [
     "torch==2.14.1",
     "torchvision==0.29.1",

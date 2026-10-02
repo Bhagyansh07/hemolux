@@ -7,7 +7,7 @@ file or touch a network.
 
 Why this module exists at all
 ----------------------------
-The entire fairness hypothesis (C3 in ``brain/01_PRD.md`` §7) rests on the
+The entire fairness hypothesis (claim C3) rests on the
 claim that **melanin and haemoglobin absorb in overlapping spectral bands**, so
 a three-channel RGB sensor cannot cleanly separate them. To test that claim we
 need an objective, automatic measure of pigmentation. Two are implemented:
@@ -24,7 +24,7 @@ Each of these is a **documented, independently defined** colour statistic. They
 are *not* presented as byte-exact reimplementations of any single paper's formula
 unless the docstring says so. That distinction is deliberate: the point of Phase 1
 is to establish an honest performance floor, and an invented formula that happens
-to score well would defeat it. See ``brain/17_DECISIONS.md``.
+to score well would defeat it.
 """
 
 from __future__ import annotations
@@ -256,8 +256,8 @@ class ColourFeatureVector:
 def extract_colour_features(rgb: NDArray[np.ndarray], mask: NDArray[np.ndarray] | None = None) -> ColourFeatureVector:
     """Compute the full classical feature set over an ROI.
 
-    ``mask`` should be the conjunctival region of interest (``brain/03_ARCHITECTURE.md`
-    §2). Passing ``None`` measures the whole frame, which is deliberately
+    ``mask`` should be the conjunctival region of interest. Passing ``None``
+    measures the whole frame, which is deliberately
     *worse* — that difference is experiment C2.
     """
     arr = np.asarray(rgb)
@@ -366,9 +366,8 @@ def conjunctival_pigmentation(lab_mean: NDArray[np.float64]) -> float:
     The mapping is a fixed, monotone normalisation over the physiologically
     plausible ``b*`` range for ocular tissue rather than a fitted parameter, so
     it cannot silently absorb a signal of its own. It is a **proxy**: it is
-    validated against a manual 3-level annotation in Phase 3
-    (``brain/15_MICROTASKS.md`` T-302), and the agreement between the two is
-    reported.
+    validated against a manual 3-level annotation, and the agreement between
+    the two is reported in ``FAIRNESS_REPORT.md``.
     """
     b_star = float(lab_mean[2])
     if not np.isfinite(b_star):

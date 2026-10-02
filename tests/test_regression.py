@@ -283,7 +283,8 @@ def test_diffs_are_not_in_the_repr_or_equality() -> None:
 
 
 def test_bias_ci_is_deterministic_for_a_fixed_seed() -> None:
-    """``brain/13_TESTING.md`` §2: two runs must produce identical output."""
+    """Two runs must produce identical output, so a number in the report can
+    be reproduced rather than merely believed."""
     a = bias_ci95(YT, YP, seed=11)
     b = bias_ci95(YT, YP, seed=11)
     assert a == b
@@ -349,7 +350,8 @@ def test_report_to_dict_is_all_scalars() -> None:
 
 
 def test_a_single_run_is_labelled_as_such() -> None:
-    """A bare number from one run is what 13_TESTING.md §3 forbids."""
+    """A bare number from a single run is the failure mode this guards: it is
+    indistinguishable from a real measurement."""
     assert "single run" in format_mean_std([0.87])
 
 

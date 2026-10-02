@@ -12,7 +12,8 @@ three families:
   standard the method-comparison literature requires.
 
 Reporting MAE alone is the most common way this kind of paper overstates its own
-result. Per ``brain/13_TESTING.md`` §3, no bare number is ever reported.
+result. No bare number is ever reported: every metric leaves here carrying a
+spread and, where the method requires one, a confidence interval.
 """
 
 from __future__ import annotations
@@ -191,8 +192,8 @@ def bland_altman(y_true: _FloatArr, y_pred: _FloatArr) -> BlandAltman:
 def bias_ci95(y_true: _FloatArr, y_pred: _FloatArr, *, seed: int = 42, n_boot: int = 2000) -> tuple[float, float]:
     """Percentile bootstrap 95% CI for the Bland–Altman bias.
 
-    Seeded, so two runs produce byte-identical output (required by
-    ``brain/13_TESTING.md`` §2).
+    Seeded, so two runs of the same code produce byte-identical output and a
+    number in the report can be reproduced rather than merely believed.
     """
     a, b = _clean(y_true, y_pred)
     rng = np.random.default_rng(seed)
@@ -258,7 +259,7 @@ def regression_report(y_true: _FloatArr, y_pred: _FloatArr) -> RegressionReport:
 def format_mean_std(values: list[float], digits: int = 3) -> str:
     """``mean +/- std`` across folds or seeds. Never a bare number.
 
-    ``brain/13_TESTING.md`` §3 rule 1 forbids reporting a single run.
+    A single sample is labelled as such rather than presented as a result.
     """
     arr = np.asarray([v for v in values if np.isfinite(v)], dtype=np.float64)
     if arr.size == 0:

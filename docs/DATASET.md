@@ -105,8 +105,8 @@ the identifier rather than a directory detail, because `12` in one country is no
 ## Masks
 
 Masks are matched to their photograph by suffix, longest suffix first, so
-`_forniceal` wins over a hypothetical shorter match rather than the other way
-round. That ordering is in `MASK_SUFFIX_ORDER` and is tested.
+`forniceal_palpebral` is never mistaken for `forniceal`. That ordering is in
+`MASK_SUFFIX_ORDER` and is tested.
 
 Filenames in the corpus contain typos. `ROI_TYPOS` holds the known ones, and a
 bounded Levenshtein fallback catches the rest, called with a cap of a single
@@ -115,10 +115,48 @@ similarity. Both mechanisms exist because an unmatched mask silently degrades a
 measurement instead of failing, which is the worst possible failure mode for a
 mask.
 
-Mask areas vary enormously — the palpebral mask is 0 px at minimum, median 73 822,
-maximum 11 890 760. A mask that matched nothing reads as an empty mask and is
-caught by the framing check in `data/quality.py`, which rejects an ROI outside
-1.5% to 85% of the frame.
+**Masks are not stored at the frame resolution.** Every frame is 2988×3984, and
+211 of the 217 palpebral masks are 800×1067 — roughly a quarter of the area. The
+loader resizes with nearest-neighbour interpolation, because a mask is a region
+label and interpolating one invents boundary pixels nobody segmented.
+
+That is why mask area is reported below as a **fraction** of the frame rather than
+in pixels. A fraction is resolution-independent; a pixel count is not, and mixing
+the two produced a wrong number here before it was measured properly.
+
+Six patients have no forniceal mask at all: `Italy/1`, `Italy/35`, `Italy/54`,
+`Italy/58`, `Italy/75` and `Italy/109`. The default ROI is palpebral, which all
+217 patients have, so the default path is unaffected.
+
+One palpebral mask *is* stored at full frame resolution, which makes it the
+outlier in every table below and is the sole reason the maximum area looks like it
+does. It is not a failure of matching — its fill fraction of 0.9999 is a fact about
+the mask.
+
+### Measured mask geometry
+
+Measured over the 217 patients with `scripts/validate_dataset.py`, which prints
+this table rather than having it transcribed.
+
+| ROI | matched | area fraction: min | p10 | median | max | below 1.5% | above 85% |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| palpebral | 217/217 | 0.000001 | 0.0013 | 0.0975 | 0.9999 | 77 | 31 |
+| forniceal | 211/217 | 0.000986 | 0.0353 | 0.1411 | 0.9996 | 8 | 30 |
+| forniceal_palpebral | 211/217 | 0.050677 | 0.1258 | 0.2046 | 0.9989 | 0 | 30 |
+
+In pixels, the palpebral mask runs from **1 px** to 11 865 803 px, median 83 190.
+
+**108 of the 217 palpebral masks fall outside the 1.5%–85% band** the quality gate
+applies — 77 too small, 31 too large. `India/3` is the extreme small case at a
+single pixel; `Italy/2` is the extreme large one at 99.99% of the frame, which is
+to say its mask is the photograph.
+
+This is the most consequential thing in this file and it was invisible until the
+validator measured it. Roughly half the default ROI is unusable as drawn, so any
+result computed over the palpebral ROI is computed over a population that is about
+half degenerate, and the figure moves depending on how the gate treats those
+patients. Whatever that treatment is, it has to be stated next to the number
+rather than left to the reader of `data/quality.py`.
 
 ## Preprocessing
 

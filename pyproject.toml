@@ -1,0 +1,104 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hemoscan"
+version = "0.1.0"
+description = "Non-invasive haemoglobin screening from smartphone tissue images, with a skin-tone fairness audit."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Bhagyansh" }]
+
+# Pinned to versions verified working together on Windows + Python 3.13.
+# torch/torchvision must come from the CPU index, not PyPI, or pip pulls
+# multi-GB CUDA wheels. See brain/20_ENV_SETUP.md §2.
+dependencies = [
+    "torch==2.14.1",
+    "torchvision==0.29.1",
+    "timm==1.0.30",
+    "numpy==2.5.2",
+    "pandas==3.0.6",
+    "scipy==1.18.1",
+    "scikit-learn==1.9.1",
+    "opencv-python-headless==5.0.0.93",
+    "pillow==12.3.0",
+    "albumentations==2.0.8",
+    "matplotlib==3.11.2",
+    "openpyxl==3.1.5",
+    "xlrd==2.0.2",
+    "onnx==1.23.1",
+    "onnxruntime==1.30.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.16.10",
+    "mypy==2.3.1",
+]
+
+[project.scripts]
+hemoscan = "hemoscan.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hemoscan"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "scripts", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",         # pyflakes
+    "I",         # isort
+    "N",         # pep8-naming
+    "UP",        # pyupgrade
+    "B",         # bugbear
+    "C4",        # comprehensions
+    "SIM",       # simplify
+    "PTH",       # pathlib
+    "RUF",       # ruff-specific
+    "ARG",       # unused arguments
+    "TID",       # tidy imports
+]
+ignore = [
+    "E501",     # line length handled by the formatter
+    "B008",     # FastAPI-style calls in docstrings are fine here
+    "SIM108",   # ternary is not always clearer
+    "RUF001",   # en-dash / smart quotes in docstrings are intentional
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG001", "ARG002"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_configs = true
+warn_redundant_casts = true
+no_implicit_optional = true
+files = ["src/hemoscan"]
+
+[[tool.mypy.overrides]]
+module = ["timm.*", "cv2.*", "albumentations.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+markers = [
+    "slow: tests that take more than a few seconds",
+]

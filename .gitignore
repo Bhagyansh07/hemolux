@@ -1,0 +1,66 @@
+# --- secrets: never commit these (brain/10_SECURITY.md §7) ---
+.env
+.env.*
+*.pem
+*.key
+kaggle.json
+*_rsa.pem
+
+# --- research data: contains identifiable body images + lab values ---
+# brain/06_DATA_INGESTION_SPEC.md §3. These are NEVER pushed.
+data/raw/
+data/interim/
+data/processed/
+data/synthetic/
+*.zip
+!artifacts/**/*.zip
+
+# --- model weights: shipped as GitHub Release assets, not in git ---
+# brain/12_CICD_GITHUB_ACTIONS.md §6
+artifacts/models/*.pt
+artifacts/models/*.pth
+artifacts/models/*.onnx
+app/web/public/models/*.onnx
+app/web/public/models/*.wasm
+
+# --- build output ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# --- frontend ---
+app/web/node_modules/
+app/web/dist/
+app/web/.vite/
+app/web/.env*
+app/web/coverage/
+
+# --- wrangler / cloudflare local state ---
+.wrangler/
+.dev.vars
+.dev.vars.*
+worker-configuration.d.ts
+
+# --- notebooks: strip checkpoints, keep the .ipynb ---
+.ipynb_checkpoints/
+
+# --- editors / os ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# --- keep the derived evidence that backs EVALS.md ---
+!artifacts/reports/
+!artifacts/figures/

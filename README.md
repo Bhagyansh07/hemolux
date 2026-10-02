@@ -1,5 +1,11 @@
 # Hemolux
 
+[![CI](https://github.com/Bhagyansh07/hemolux/actions/workflows/ci.yml/badge.svg)](https://github.com/Bhagyansh07/hemolux/actions/workflows/ci.yml)
+[![Last commit](https://img.shields.io/github/last-commit/Bhagyansh07/hemolux)](https://github.com/Bhagyansh07/hemolux/commits/main)
+[![License](https://img.shields.io/github/license/Bhagyansh07/hemolux)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
+[![Torch](https://img.shields.io/badge/torch-2.x%20%2B%20onnxruntime-informational)](pyproject.toml)
+
 Non-invasive haemoglobin screening from smartphone images of the palpebral
 conjunctiva, with a skin-tone fairness audit attached to every number it reports.
 

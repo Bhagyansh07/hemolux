@@ -148,10 +148,31 @@ WHO_SEVERE = 7.0
 HB_VALID_MIN = 3.0
 HB_VALID_MAX = 25.0
 
+#: Prefix on every file ``scripts/make_synthetic_fixture.py`` writes, so that no
+#: synthetic artefact can be mistaken for a real one.
+#:
+#: It is load-bearing rather than decorative. The generated corpus deliberately
+#: reproduces the real on-disk layout -- the same site directories, the same
+#: workbook names, the same mask naming conventions -- because a fixture that
+#: quietly standardised any of those would stop exercising the branches it exists
+#: to exercise. That makes a fixture indistinguishable from the download by shape,
+#: so this prefix is how the corpus is recognised as synthetic: the validator
+#: skips its literal 217-patient assertions for anything carrying the marker.
+#:
+#: Defined here rather than in the generator because the two have to agree, and a
+#: generator-only constant would be one edit away from being a lie.
+SYNTHETIC_MARKER = "SYNTHETIC_"
+
 #: Target input size. 224 is the native resolution of the EfficientNet and
 #: MobileNetV3 families; going larger costs quadratic compute for no measured gain
 #: on conjunctival ROIs, which are typically small in the frame.
 IMAGE_SIZE = 224
+
+#: Above this the exported graph stops being something a phone downloads without
+#: asking twice. A threshold on the artefact only, reported as a warning at export
+#: time so the decision to quantise happens while there is still time -- not
+#: asserted anywhere in EVALS.md and not a claim about any published model.
+MOBILE_BUDGET_MB = 20.0
 
 #: Reference points from the published literature, for context in EVALS.md.
 #: These are NOT thresholds this project asserts; they are what we compare to.

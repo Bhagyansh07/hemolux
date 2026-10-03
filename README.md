@@ -21,9 +21,10 @@ make treatment decisions.** See [ETHICS.md](ETHICS.md).
 
 ## Status
 
-The measurement and evaluation library is complete and tested. The training and
-in-browser inference pipeline is under construction and is not yet in this tree.
-Nothing below is claimed ahead of the code that would produce it.
+The measurement, evaluation and training library is complete and tested, and the
+ONNX graph the browser will run is exported and checked against PyTorch. The web
+front end and the telemetry Worker are not yet in this tree, so nothing is claimed
+about a screen anyone can look at.
 
 | Component | State |
 | --- | --- |
@@ -36,13 +37,16 @@ Nothing below is claimed ahead of the code that would produce it.
 | Image quality gate | implemented, 41 tests |
 | Losses | implemented, 54 tests |
 | Backbone builder and five regression heads | implemented, 26 tests |
-| Corpus validator and synthetic fixture | implemented, 15 tests |
+| Corpus validator | implemented, 29 tests |
+| Synthetic corpus fixture | implemented, 12 tests |
 | Image metadata warning filter | implemented, 17 tests |
-| Training loop and CLI | in progress, not in this tree |
-| ONNX export and browser runtime | in progress, not in this tree |
+| Training loop and feature cache | implemented, 43 tests |
+| ONNX export, verified against PyTorch | implemented, 21 tests |
+| Command line, all five subcommands end to end | implemented, 19 tests |
+| Web front end and telemetry Worker | not yet in this tree |
 | Measured results | not yet published; [EVALS.md](EVALS.md) is a stub |
 
-585 tests, all passing, `ruff check .` clean.
+694 tests, all passing, `ruff check .` clean.
 
 ## The claims this project tests
 
@@ -98,6 +102,10 @@ where most of the work goes, and most of that work is in refusing to report.
 src/hemolux/
   config.py              seeds, paths, input size, published reference points
   losses.py              Huber, soft-target cross-entropy, focal, class weights
+  training.py            five heads, the training loop, the feature cache
+  validation.py          the corpus validator behind `hemolux validate`
+  export.py              ONNX graph assembly, and the check against PyTorch
+  cli.py                 the five subcommands
   data/
     dataset.py           workbook and mask discovery, preprocessing spec
     splits.py            patient-disjoint folds, site holdout, leakage guards
@@ -112,9 +120,8 @@ src/hemolux/
     heads.py             binary, severity, regression, ordinal, multitask
 scripts/
   quality_sweep.py          measures the corpus to justify QUALITY_ABSTAIN
-  validate_dataset.py       checks a corpus before anything downstream may use it
   make_synthetic_fixture.py writes a corpus in the real layout, for CI
-tests/                      585 tests
+tests/                      694 tests
 ```
 
 ## Dataset
@@ -155,9 +162,12 @@ wheels that this project never uses. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Development
 
 ```bash
-pytest                                  # 585 tests
+pytest                                  # 694 tests
 ruff check .                            # lint
-python scripts/validate_dataset.py      # what is actually in the corpus
+hemolux validate                        # what is actually in the corpus
+hemolux train                           # train every head, report, write checkpoints
+hemolux export --head ordinal           # the graph the browser runs
+hemolux report                          # reprint the last run's numbers
 python scripts/quality_sweep.py         # corpus quality distribution
 ```
 

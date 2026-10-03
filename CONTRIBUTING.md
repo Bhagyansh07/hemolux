@@ -31,8 +31,8 @@ did not take effect. Check `pip show torch` before continuing.
 pytest                    # the full suite
 ruff check .              # lint
 pytest tests/test_fairness.py -v
-python scripts/validate_dataset.py      # what is actually in the corpus
-python scripts/quality_sweep.py         # the quality distribution
+hemolux validate                    # what is actually in the corpus
+python scripts/quality_sweep.py      # the quality distribution
 ```
 
 `pyproject.toml` sets `testpaths = ["tests"]` and `--strict-markers`. Tests
@@ -45,7 +45,7 @@ corpus from Kaggle and unpack it to the path in
 `hemolux.data.dataset.DEFAULT_ROOT`. See [docs/DATASET.md](docs/DATASET.md).
 
 `python scripts/make_synthetic_fixture.py` writes a small synthetic corpus in the
-same layout for tests and CI, and `python scripts/validate_dataset.py --synthetic`
+same layout for tests and CI, and `hemolux validate --data-root data/synthetic`
 checks it. Every artifact the generator writes is prefixed `SYNTHETIC_`, so a
 synthetic result can never be mistaken for a real one.
 

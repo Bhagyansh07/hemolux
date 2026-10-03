@@ -29,7 +29,7 @@ about a screen anyone can look at.
 | Component | State |
 | --- | --- |
 | Dataset loader, 217 patients, two sites | implemented, 114 tests |
-| Colourimetry, L\*a\*b\*, erythema index, ITA | implemented, 39 tests |
+| Colourimetry, L\*a\*b\*, erythema index, ITA | implemented, 62 tests |
 | Regression metrics, Bland-Altman with bootstrap CI | implemented, 46 tests |
 | Fairness audit, subgroup error and bias-vs-ITA | implemented, 94 tests |
 | Calibration, ECE, temperature scaling, risk-coverage | implemented, 75 tests |
@@ -40,13 +40,15 @@ about a screen anyone can look at.
 | Corpus validator | implemented, 29 tests |
 | Synthetic corpus fixture | implemented, 12 tests |
 | Image metadata warning filter | implemented, 17 tests |
-| Training loop and feature cache | implemented, 43 tests |
+| Feature-cache fingerprint | implemented, 18 tests |
+| Training loop and feature cache | implemented, 53 tests |
+| Validation-only configuration sweep | implemented, 17 tests |
 | ONNX export, verified against PyTorch | implemented, 21 tests |
-| Command line, all five subcommands end to end | implemented, 19 tests |
+| Command line, all six subcommands end to end | implemented, 27 tests |
 | Web front end and telemetry Worker | not yet in this tree |
 | Measured results | not yet published; [EVALS.md](EVALS.md) is a stub |
 
-694 tests, all passing, `ruff check .` clean.
+770 tests, all passing, `ruff check .` clean.
 
 ## The claims this project tests
 
@@ -104,8 +106,10 @@ src/hemolux/
   losses.py              Huber, soft-target cross-entropy, focal, class weights
   training.py            five heads, the training loop, the feature cache
   validation.py          the corpus validator behind `hemolux validate`
+  fingerprint.py         what a cached feature set must notice about the code
+  sweep.py               configuration selection on validation, test read once
   export.py              ONNX graph assembly, and the check against PyTorch
-  cli.py                 the five subcommands
+  cli.py                 the six subcommands
   data/
     dataset.py           workbook and mask discovery, preprocessing spec
     splits.py            patient-disjoint folds, site holdout, leakage guards
@@ -121,7 +125,7 @@ src/hemolux/
 scripts/
   quality_sweep.py          measures the corpus to justify QUALITY_ABSTAIN
   make_synthetic_fixture.py writes a corpus in the real layout, for CI
-tests/                      694 tests
+tests/                      770 tests
 ```
 
 ## Dataset
@@ -162,7 +166,7 @@ wheels that this project never uses. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Development
 
 ```bash
-pytest                                  # 694 tests
+pytest                                  # 770 tests
 ruff check .                            # lint
 hemolux validate                        # what is actually in the corpus
 hemolux train                           # train every head, report, write checkpoints

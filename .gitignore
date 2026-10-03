@@ -22,8 +22,12 @@ data/synthetic/
 # have silently made the two `!artifacts/...` rules at the end of this file dead
 # and left a 162 KB feature cache on track for commit.
 artifacts/*
-app/web/public/models/*.onnx
-app/web/public/models/*.wasm
+# Generated at deploy time from artifacts/ by scripts/build_site.mjs, never
+# committed: the model is a binary and the runtime is a vendored npm package.
+app/web/models/*.onnx
+app/web/models/*.json
+app/web/data/
+app/web/vendor/
 
 # --- build output ---
 __pycache__/

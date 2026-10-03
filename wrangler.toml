@@ -1,0 +1,19 @@
+# Cloudflare Pages project config.
+#
+# The app is static files in app/web/; the two Functions in functions/api/v1/
+# run on the edge. The D1 database holds telemetry and confirmed-Hb feedback.
+# Nothing else is server-side, and no request carries an image.
+#
+# Deploy:
+#   wrangler pages deploy app/web --project-name hemolux
+# Bind D1:
+#   wrangler d1 create hemolux-telemetry   # then paste the id below
+
+name = "hemolux"
+pages_build_output_dir = "app/web"
+compatibility_date = "2025-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hemolux-telemetry"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"

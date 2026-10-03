@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION on any change to the shell; the activate handler drops
  * every older cache.
  */
-const CACHE_VERSION = "hemolux-v2";
+const CACHE_VERSION = "hemolux-v3";
 
 const SHELL = [
   "/",

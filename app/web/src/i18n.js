@@ -70,6 +70,24 @@ export const MESSAGES = {
     "evidence.yes": "yes",
     "evidence.no": "no",
 
+    "evidence.sweep_h": "Configuration sweep",
+    "evidence.sweep_intro":
+      "Every candidate is fitted on the validation fold and the test fold is read once, after the winner is chosen. The table below is validation only; the single test row at the end is the one measurement taken afterwards.",
+    "evidence.sweep_metric": "Selection metric",
+    "evidence.sweep_winner": "Winner",
+    "evidence.sweep_gap": "Validation gap to next (g/dL)",
+    "evidence.sweep_fold": "Split",
+    "evidence.sweep_fold_value": "{train} train / {val} validation / {test} test",
+    "evidence.sweep_near_tie":
+      "The gap is under 0.10 g/dL: this is a near-tie, so the test figure is one draw from several candidates that are about equally good.",
+    "evidence.sweep_row": "val MAE {mae} · val R² {r2}",
+    "evidence.sweep_test_h": "Winner's test fold, read once",
+    "evidence.sweep_test_row": "MAE {mae} · RMSE {rmse} · R² {r2} · within ±1 g/dL {within}",
+    "evidence.sweep_no_test": "The winner was not scored on a test fold.",
+    "evidence.sweep_unmasked_h": "Patients measured on the whole frame",
+    "evidence.sweep_unmasked_row":
+      "{label}: {count} patient(s), because their record holds no mask for the region requested.",
+
     "method.title": "Method & limits",
     "method.how_h": "How it works",
     "method.how_b":
@@ -154,6 +172,24 @@ export const MESSAGES = {
     "evidence.dirty": "वर्किंग ट्री में बदलाव",
     "evidence.yes": "हाँ",
     "evidence.no": "नहीं",
+
+    "evidence.sweep_h": "कॉन्फ़िगरेशन स्वीप",
+    "evidence.sweep_intro":
+      "हर उम्मीदवार वैलिडेशन फ़ोल्ड पर फ़िट होता है और टेस्ट फ़ोल्ड विजेता चुनने के बाद एक बार पढ़ा जाता है। नीचे की तालिका केवल वैलिडेशन की है; अंत की एक टेस्ट पंक्ति बाद में लिया गया एकमात्र माप है।",
+    "evidence.sweep_metric": "चयन मेट्रिक",
+    "evidence.sweep_winner": "विजेता",
+    "evidence.sweep_gap": "अगले से वैलिडेशन अंतर (g/dL)",
+    "evidence.sweep_fold": "विभाजन",
+    "evidence.sweep_fold_value": "{train} ट्रेन / {val} वैलिडेशन / {test} टेस्ट",
+    "evidence.sweep_near_tie":
+      "अंतर 0.10 g/dL से कम है: यह लगभग बराबरी है, इसलिए टेस्ट संख्या कई लगभग समान उम्मीदवारों में से एक है।",
+    "evidence.sweep_row": "val MAE {mae} · val R² {r2}",
+    "evidence.sweep_test_h": "विजेता का टेस्ट फ़ोल्ड, एक बार पढ़ा गया",
+    "evidence.sweep_test_row": "MAE {mae} · RMSE {rmse} · R² {r2} · ±1 g/dL के भीतर {within}",
+    "evidence.sweep_no_test": "विजेता को टेस्ट फ़ोल्ड पर नहीं आँका गया।",
+    "evidence.sweep_unmasked_h": "पूरे फ़्रेम पर मापे गए मरीज़",
+    "evidence.sweep_unmasked_row":
+      "{label}: {count} मरीज़, क्योंकि उनके रिकॉर्ड में माँगे गए क्षेत्र के लिए मास्क नहीं है।",
 
     "method.title": "तरीका और सीमाएँ",
     "method.how_h": "यह कैसे काम करता है",

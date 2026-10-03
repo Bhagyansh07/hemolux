@@ -1,6 +1,6 @@
 import { applyI18n, getLang, setLang, t } from "./i18n.js";
 import { analyse } from "./inference.js";
-import { renderEvidence } from "./evidence.js";
+import { renderEvidence, renderSweep, summarise, summariseSweep } from "./evidence.js";
 import { reportScreening } from "./telemetry.js";
 
 /* The guide ellipse, in fractions of the captured frame. Kept beside the SVG
@@ -72,25 +72,42 @@ window.addEventListener("offline", renderLang);
  * ------------------------------------------------------------------ */
 
 let evidenceReport = null;
+let sweepReport = null;
 
-/* Re-render on language change. Before the report arrives this is a no-op and
- * the panel keeps the pending notice it was served with. */
+/* Re-render on language change. Before either report arrives both reducers
+ * return null and the panel keeps the pending notice it was served with. */
 function renderEvidencePanel() {
   const container = document.getElementById("evidence-metrics");
-  if (!container || !evidenceReport) return;
-  renderEvidence(container, t, evidenceReport);
+  if (!container) return;
+  const hasResults = summarise(evidenceReport) !== null;
+  const hasSweep = summariseSweep(sweepReport) !== null;
+  if (!hasResults && !hasSweep) return;
+  container.replaceChildren();
+  if (hasResults) renderEvidence(container, t, evidenceReport);
+  if (hasSweep) renderSweep(container, t, sweepReport);
 }
 
-/* The report is staged by `scripts/build_site.mjs`, never committed, so a fresh
- * checkout has none and the page stays honest about it. */
+/* Both reports are staged by `scripts/build_site.mjs`, never committed, so a
+ * fresh checkout has neither and the page stays honest about it. Either may be
+ * present without the other: a sweep that has not been followed by a train run
+ * still shows, and the panel does not pretend the missing one is zero. */
+async function loadJson(path) {
+  const response = await fetch(path, { cache: "no-cache" });
+  if (!response.ok) return null;
+  return response.json();
+}
+
 async function loadEvidence() {
   try {
-    const response = await fetch("/data/results.json", { cache: "no-cache" });
-    if (!response.ok) return;
-    evidenceReport = await response.json();
+    const [results, sweep] = await Promise.all([
+      loadJson("/data/results.json"),
+      loadJson("/data/sweep.json"),
+    ]);
+    evidenceReport = results;
+    sweepReport = sweep;
     renderEvidencePanel();
   } catch {
-    /* No report: the pending notice stands. */
+    /* No reports: the pending notice stands. */
   }
 }
 

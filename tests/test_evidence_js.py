@@ -53,3 +53,45 @@ def test_heads_lead_with_the_screening_estimate(payload: dict) -> None:
 def test_nothing_to_show_stays_nothing(payload: dict) -> None:
     assert payload["empty"] is None
     assert payload["noRows"] is None
+
+
+def test_sweep_winner_leads_regardless_of_input_order(payload: dict) -> None:
+    # The fixture lists the worst candidate first on purpose: the reducer, not
+    # the report's file order, decides what the panel shows first.
+    out = payload["sweepOut"]
+    assert out["winner"] == "deep / palpebral"
+    assert out["metric"] == "mae"
+    assert out["nCandidates"] == 3
+    assert payload["sweepOrder"] == [
+        "deep / palpebral",
+        "colour / forniceal / raw",
+        "colour / forniceal / balanced",
+    ]
+    assert out["rows"][0]["selected"] is True
+
+
+def test_sweep_exposes_the_single_test_read(payload: dict) -> None:
+    out = payload["sweepOut"]
+    assert out["fold"] == {"train": 131, "val": 43, "test": 43}
+    assert out["test"]["n"] == 43
+    assert out["test"]["mae"] == pytest.approx(1.62)
+    assert out["test"]["r2"] == pytest.approx(0.24)
+    assert out["nearTie"] is False
+
+
+def test_sweep_flags_a_near_tie(payload: dict) -> None:
+    assert payload["sweepNearTie"] is True
+
+
+def test_sweep_keeps_the_whole_frame_patients_named(payload: dict) -> None:
+    out = payload["sweepOut"]
+    assert [entry["label"] for entry in out["unmasked"]] == [
+        "colour / forniceal / balanced",
+        "colour / forniceal / raw",
+    ]
+    assert all(entry["count"] == 6 for entry in out["unmasked"])
+
+
+def test_sweep_nothing_to_show_stays_nothing(payload: dict) -> None:
+    assert payload["sweepEmpty"] is None
+    assert payload["sweepNoRows"] is None

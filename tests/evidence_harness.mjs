@@ -1,10 +1,10 @@
-/* Exercises the Evidence reducer without a DOM.
+/* Exercises the Evidence reducers without a DOM.
  *
- * The report shape is copied from `training.build_report`: provenance, corpus
- * and a `single_split` list of per-head test rows. tests/test_evidence_js.py
- * checks the fields the panel depends on, including the presentation order.
+ * The report shapes are copied from `training.build_report` (results.json) and
+ * `sweep.build_sweep_report` (sweep.json). tests/test_evidence_js.py checks the
+ * fields the panel depends on, including presentation order for both.
  */
-import { summarise } from "../app/web/src/evidence.js";
+import { summarise, summariseSweep } from "../app/web/src/evidence.js";
 
 const report = {
   provenance: {
@@ -61,12 +61,95 @@ const report = {
   ],
 };
 
-const out = summarise(report);
+const sweep = {
+  provenance: {
+    git_commit: "def456",
+    feature_fingerprint: "859399ade17b39e8",
+    generated_at: "2026-10-03T12:30:00Z",
+    git_dirty: false,
+  },
+  metric: "mae",
+  fold: { name: "sweep-seed42", n_train: 131, n_val: 43, n_test: 43 },
+  candidates: [
+    {
+      label: "colour / forniceal / balanced",
+      kind: "colour",
+      roi: "forniceal",
+      balance: "balanced",
+      head: "regression",
+      feature_dim: 12,
+      val_mae: 5.704,
+      val_r2: -8.511,
+      best_epoch: 40,
+      seconds: 0.3,
+      n_unmasked: 6,
+      selected: false,
+    },
+    {
+      label: "deep / palpebral",
+      kind: "deep",
+      roi: "palpebral",
+      balance: "balanced",
+      head: "regression",
+      feature_dim: 1024,
+      val_mae: 1.71,
+      val_r2: 0.21,
+      best_epoch: 38,
+      seconds: 3.1,
+      n_unmasked: 0,
+      selected: true,
+    },
+    {
+      label: "colour / forniceal / raw",
+      kind: "colour",
+      roi: "forniceal",
+      balance: "raw",
+      head: "regression",
+      feature_dim: 12,
+      val_mae: 1.99,
+      val_r2: -0.2,
+      best_epoch: 40,
+      seconds: 0.3,
+      n_unmasked: 6,
+      selected: false,
+    },
+  ],
+  n_unmasked_by_label: {
+    "colour / forniceal / balanced": 6,
+    "colour / forniceal / raw": 6,
+  },
+  winner: "deep / palpebral",
+  selection_gap: 0.28,
+  test_read: "once, after selection",
+  excluded_features: ["erythema_index"],
+  test: {
+    n: 43,
+    mae: 1.62,
+    rmse: 2.11,
+    r2: 0.24,
+    evs: 0.25,
+    pearson_r: 0.52,
+    bias: 0.1,
+    loa_lower: -3.9,
+    loa_upper: 4.1,
+    within_1: 0.6,
+    within_2: 0.88,
+  },
+  notes: ["test fold scored once, after selection"],
+};
+
+const sweepOut = summariseSweep(sweep);
+
 process.stdout.write(
   JSON.stringify({
-    out,
-    headOrder: out.heads.map((head) => head.head),
+    out: summarise(report),
+    headOrder: summarise(report).heads.map((head) => head.head),
     empty: summarise(null),
     noRows: summarise({ single_split: [] }),
+    sweepOut,
+    sweepOrder: sweepOut.rows.map((row) => row.label),
+    sweepNearTie: summariseSweep({ ...sweep, selection_gap: 0.05 }).nearTie,
+    sweepEmpty: summariseSweep(null),
+    sweepNoRows: summariseSweep({ candidates: [] }),
   }),
 );

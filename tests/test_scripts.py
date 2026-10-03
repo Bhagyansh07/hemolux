@@ -278,3 +278,24 @@ def test_the_mask_resolution_differs_from_the_frame_in_the_generated_corpus(
     assert mask.shape[:2] != frame.shape[:2], "fixture masks now match the frame resolution"
     # Aspect ratio is preserved, so the mask still belongs to this frame.
     assert abs((mask.shape[1] / mask.shape[0]) - (frame.shape[1] / frame.shape[0])) < 0.02
+
+
+# --------------------------------------------------------------------------- #
+# Social card
+# --------------------------------------------------------------------------- #
+
+
+def test_social_card_is_drawn_at_the_size_the_meta_tags_declare() -> None:
+    """``og:image:width/height`` say 1200x630, and nothing else couples them.
+
+    The tag lives in ``app/web/index.html`` and the image in
+    ``scripts/make_og_image.py``, so a size that drifts is only caught by a test
+    that draws the card and measures it -- every platform crops or letterboxes a
+    mismatch, and neither looks like broken markup.
+    """
+    mod = _load("make_og_image")
+    card = mod.draw_card()
+    assert card.size == (1200, 630)
+    # A blank card of the right size would pass the line above.
+    colours = card.getcolors(maxcolors=1_000_000)
+    assert colours is not None and len(colours) > 2

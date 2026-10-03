@@ -34,6 +34,7 @@ from hemolux.config import (
     set_seed,
 )
 from hemolux.data.dataset import DEFAULT_ROOT
+from hemolux.training import FEATURE_KINDS
 
 _DEFAULT_DATA = DEFAULT_ROOT
 
@@ -64,6 +65,30 @@ def _parse_feature_inputs(parser: argparse.ArgumentParser) -> None:
         "--roi", default="palpebral", help="palpebral | forniceal | forniceal_palpebral"
     )
     parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument(
+        "--features",
+        default="deep",
+        choices=list(FEATURE_KINDS),
+        help=(
+            "deep = frozen backbone activations, colour = hand-crafted CIELAB/HSV "
+            "features, hybrid = both concatenated. 'colour' never loads a backbone, "
+            "which is how the sweep finds out whether one is needed."
+        ),
+    )
+    balance = parser.add_mutually_exclusive_group()
+    balance.add_argument(
+        "--balance",
+        dest="balance",
+        action="store_true",
+        default=True,
+        help="divide out an estimated illuminant on the colour path (default)",
+    )
+    balance.add_argument(
+        "--no-balance",
+        dest="balance",
+        action="store_false",
+        help="measure the raw frame; the baseline the normalisation has to beat",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -193,7 +218,15 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 
 def _resolve_features(args: argparse.Namespace):
-    """Load the cached features, building them if absent or stale."""
+    """Load the cached features, building them if absent or for a different config.
+
+    The cache is found by reading each candidate's own recorded ``kind`` and
+    ``balance`` rather than by matching the filename. The filename already encodes
+    both, and matching on it would have been shorter -- but the glob then depends on
+    the naming staying in step with the content, and the failure when it drifts is a
+    cache read as the wrong configuration: same command, plausible numbers, silently
+    the wrong features. Reading the metadata makes the two disagree loudly instead.
+    """
     from hemolux.data.dataset import build_records
     from hemolux.training import (
         extract_features,
@@ -202,14 +235,36 @@ def _resolve_features(args: argparse.Namespace):
         save_feature_cache,
     )
 
-    if not getattr(args, "rebuild_features", False) and not getattr(args, "rebuild", False):
-        cached = sorted(ARTIFACT_MODELS.glob(f"features_{args.backbone}_{args.roi}_*.npz"))
-        if cached:
-            features = load_feature_cache(cached[0])
-            print(f"  using cached features: {cached[0]}")
-            return features, build_records(args.data_root, verbose=False)
+    kind = getattr(args, "features", "deep")
+    balance = "balanced" if getattr(args, "balance", True) else "raw"
 
-    print(f"\n  extracting features: backbone={args.backbone} roi={args.roi}")
+    if not getattr(args, "rebuild_features", False) and not getattr(args, "rebuild", False):
+        for path in sorted(ARTIFACT_MODELS.glob("features_*.npz")):
+            try:
+                features = load_feature_cache(path)
+            except Exception:
+                # A cache this build cannot read is not a cache, and a half-written
+                # .npz from an interrupted run is the ordinary case here. Skipping it
+                # is right: the alternative is refusing to train because of a
+                # leftover, and re-extracting is the correct response either way.
+                continue
+            same = (
+                features.roi == args.roi
+                and features.kind == kind
+                and features.balance == balance
+                # The colour path never loads a backbone, so ``--backbone`` does not
+                # identify it -- and comparing it would look for a backbone named
+                # "none", missing the cache on every call. Skipped rather than faked,
+                # because for colour features the trunk genuinely is not part of what
+                # the numbers are. It still matters for hybrid, which concatenates it.
+                and (kind == "colour" or features.backbone == args.backbone)
+            )
+            if same:
+                print(f"  using cached features: {path.name}")
+                return features, build_records(args.data_root, verbose=False)
+
+    label = kind if kind == "deep" else f"{kind} ({balance})"
+    print(f"\n  extracting features: {label}  backbone={args.backbone} roi={args.roi}")
     records = build_records(args.data_root, verbose=True)
     features = extract_features(
         records,
@@ -218,6 +273,8 @@ def _resolve_features(args: argparse.Namespace):
         batch_size=args.batch_size,
         device=args.device,
         seed=args.seed,
+        kind=kind,
+        balance=balance == "balanced",
     )
     path = save_feature_cache(features)
     print(f"  wrote {path}  ({feature_cache_path(features).name})")
@@ -227,6 +284,7 @@ def _resolve_features(args: argparse.Namespace):
 def cmd_features(args: argparse.Namespace) -> int:
     features, _ = _resolve_features(args)
     print(f"\n  patients: {len(features.patient_ids)}")
+    print(f"  feature kind: {features.kind} ({features.balance})")
     print(f"  feature dim: {features.feature_dim}")
     for site in sorted(set(features.site)):
         hb = [h for h, s in zip(features.hb, features.site, strict=True) if s == site]

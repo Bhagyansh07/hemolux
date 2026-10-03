@@ -1,31 +1,25 @@
-"""Tests for the corpus validator and the synthetic fixture generator.
+"""Tests for the synthetic fixture generator.
 
-Both scripts exist because of a specific failure, and both are tested against it.
+The generator exists because of a specific failure. ``scripts/make_synthetic_fixture.py``
+wrote ``data/synthetic/patients/P0000/`` behind one combined spreadsheet.
+``build_records`` wants one directory per site, a patient directory inside that, and
+a workbook named after its site, so it rejected the fixture outright with a message
+naming the two directory names it had expected. The generator had been printing a
+cheerful summary for a corpus that nothing in the repository could read.
 
-``scripts/validate_dataset.py`` was referenced in two places and did not exist:
-``make_synthetic_fixture.py`` ended by printing the command that runs it, so the
-generator told a reader to type something that raised ``FileNotFoundError``.
-
-``scripts/make_synthetic_fixture.py`` wrote ``data/synthetic/patients/P0000/``
-behind one combined spreadsheet. ``build_records`` wants one directory per site,
-a patient directory inside that, and a workbook named after its site, so it
-rejected the fixture outright with a message naming the two directory names it
-had expected. The generator had been printing a cheerful summary for a corpus
-that nothing in the repository could read.
-
-The round-trip test below is therefore the load-bearing one: it generates a
-fixture into a temporary directory and then requires the validator to accept it,
-which is the only way to catch a layout that only one of the two scripts believes
-in.
-
-The awkward parts of the real release are reproduced on purpose, and each is
-asserted here, because an unasserted reproduction is a comment:
+The awkward parts of the real release are reproduced on purpose, and each is asserted
+here, because an unasserted reproduction is a comment:
 
 * masks are stored at a smaller resolution than their frame, so the resize path is
   exercised rather than assumed;
 * the two sites name their masks differently, so both arms of the mask matcher run;
 * one patient is withdrawn with a marker in a column that has no header;
 * some patients have no forniceal mask while the palpebral default is unaffected.
+
+The round-trip test is the load-bearing one: it generates a fixture into a temporary
+directory and then requires ``hemolux.validation`` to accept it, which is the only way
+to catch a layout that only the generator believes in. That half lives in
+``test_validation.py``, next to the validator it exercises.
 """
 
 from __future__ import annotations
@@ -56,7 +50,6 @@ def _load(name: str):
 
 
 fixture_mod = _load("make_synthetic_fixture")
-validate_mod = _load("validate_dataset")
 
 
 # --------------------------------------------------------------------------- #
@@ -215,39 +208,24 @@ def _run_fixture_main(patients: int) -> int:
         sys.argv = argv
 
 
-def _run_validate_main(argv: list[str]) -> int:
-    saved = sys.argv
-    sys.argv = ["validate_dataset.py", *argv]
-    try:
-        return validate_mod.main()
-    finally:
-        sys.argv = saved
-
-
 @pytest.fixture
 def corpus(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    """A small fixture generated into ``tmp_path`` and wired into both scripts."""
+    """A small fixture generated into ``tmp_path``."""
     root = tmp_path / "synthetic"
     root.mkdir()
     monkeypatch.setattr(fixture_mod, "PATHS", SimpleNamespace(synthetic=root), raising=True)
-    monkeypatch.setattr(validate_mod, "PATHS", SimpleNamespace(synthetic=root), raising=True)
     assert _run_fixture_main(8) == 0
     return root
 
 
-def test_the_validator_accepts_a_corpus_the_generator_produced(corpus: Path) -> None:
-    """The round trip that the missing script made impossible to run.
+def test_the_generator_produces_a_corpus_the_loader_can_read(corpus: Path) -> None:
+    """The load-bearing property of the generator.
 
-    If the generator and the loader ever disagree about the layout again, this
-    fails first and names the disagreement, instead of the first training run
-    discovering it.
+    The round trip is exercised end to end in ``test_validation.py``, where the
+    validator runs over this output. What is asserted here is the narrower thing:
+    the generator does not quietly drop a share of its own patients, because the
+    survivors are still learnable and a smoke test would still pass.
     """
-    assert _run_validate_main(["--synthetic"]) == 0
-
-
-def test_the_validator_reads_back_every_generated_patient(corpus: Path) -> None:
-    """A generator that silently drops a share of its patients would still pass a
-    smoke test, because the surviving ones are still learnable."""
     from hemolux.data.dataset import build_records
 
     records = build_records(corpus, verbose=False)
@@ -292,8 +270,6 @@ def test_the_mask_resolution_differs_from_the_frame_in_the_generated_corpus(
     Without this, a future edit that stores masks at frame resolution would still
     load and still train, while quietly removing the resize path from CI.
     """
-    import cv2
-
     from hemolux.data.dataset import build_records
 
     record = build_records(corpus, verbose=False)[0]
@@ -302,18 +278,3 @@ def test_the_mask_resolution_differs_from_the_frame_in_the_generated_corpus(
     assert mask.shape[:2] != frame.shape[:2], "fixture masks now match the frame resolution"
     # Aspect ratio is preserved, so the mask still belongs to this frame.
     assert abs((mask.shape[1] / mask.shape[0]) - (frame.shape[1] / frame.shape[0])) < 0.02
-
-
-def test_the_validator_fails_loudly_on_a_root_that_does_not_exist(tmp_path: Path) -> None:
-    """A validator that exits 0 on a corpus it never read is worse than no validator."""
-    assert _run_validate_main(["--root", str(tmp_path / "absent")]) == 1
-
-
-def test_the_validator_fails_on_a_corpus_with_no_site_directory(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """The exact state the old generator left behind, asserted so it cannot return."""
-    empty = tmp_path / "wrong_layout"
-    (empty / "patients").mkdir(parents=True)
-    monkeypatch.setattr(validate_mod, "PATHS", SimpleNamespace(synthetic=empty), raising=True)
-    assert _run_validate_main(["--synthetic"]) == 1

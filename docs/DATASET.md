@@ -135,8 +135,8 @@ the mask.
 
 ### Measured mask geometry
 
-Measured over the 217 patients with `scripts/validate_dataset.py`, which prints
-this table rather than having it transcribed.
+Measured over the 217 patients with `hemolux validate`, which prints this table
+rather than having it transcribed.
 
 | ROI | matched | area fraction: min | p10 | median | max | below 1.5% | above 85% |
 | --- | --- | --- | --- | --- | --- | --- | --- |

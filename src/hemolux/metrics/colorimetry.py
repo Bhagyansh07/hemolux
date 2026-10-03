@@ -25,6 +25,23 @@ are *not* presented as byte-exact reimplementations of any single paper's formul
 unless the docstring says so. That distinction is deliberate: the point of Phase 1
 is to establish an honest performance floor, and an invented formula that happens
 to score well would defeat it.
+
+Exposure normalisation
+----------------------
+:func:`white_balance` exists because absolute colour is not a property of the tissue.
+The two sites in this corpus differ in exposure by about 20% -- Italy's frames sit
+near B102/G85/R106 against India's B84/G66/R77 -- and site is confounded with
+haemoglobin distribution (mean 11.47 g/dL against 13.83). A model reading raw RGB
+therefore has to spend capacity separating illumination from pigment before it can
+separate anaemia from health, and it may not manage it.
+
+The mechanism that makes this worth undoing is specific rather than generic.
+Haemoglobin absorbs in the green (490-577 nm) and reflects in the red (630-760 nm),
+so anaemia is a **ratio** between two channels, not a level in one. An illuminant
+that scales all three channels by the same unknown gain leaves that ratio intact, so
+dividing it out removes the nuisance term and keeps the signal. That is why the
+division is per-channel rather than a single global gain, and why the corrected image
+still carries anaemia while the raw one does not.
 """
 
 from __future__ import annotations
@@ -202,13 +219,28 @@ def high_hue_ratio(rgb_patch: NDArray[np.ndarray]) -> float:
     RAW, where the ratio has a much wider dynamic range; with 8-bit data the
     statistic is coarser and this is a faithful-but-degraded variant. Recorded as
     a limitation rather than silently compared against the published number.
+
+    The extremes are read at the 1st and 99th percentile rather than at the true
+    minimum and maximum, and that is a correction rather than a refinement. A
+    conjunctival ROI here holds about 12 million pixels, and a global ``min`` is
+    decided by whichever single pixel is darkest: ``Italy/2`` has 159 zero-valued
+    red pixels out of 11.9 million, and that was enough to return NaN for the whole
+    frame. 29 of the 217 patients -- 13% of the corpus, most of them Italian --
+    failed on a speck pixel or two while their channel *means* were entirely
+    ordinary. Over a region this large the percentile is a better estimate of the
+    tissue's darkest channel than the smallest of twelve million samples, and it is
+    what makes the statistic usable at all.
     """
     patch = np.asarray(rgb_patch, dtype=np.float64).reshape(-1, 3)
     if patch.size == 0:
         return float("nan")
-    lo = float(patch.min(axis=0).min())
-    hi = float(patch.max(axis=0).max())
-    if lo < 1.0:  # a pure-black channel would make the ratio explode
+    if patch.shape[0] >= 100:
+        lo = float(np.percentile(patch, 1.0))
+        hi = float(np.percentile(patch, 99.0))
+    else:
+        lo = float(patch.min())
+        hi = float(patch.max())
+    if lo < 1.0:  # a genuinely black channel would make the ratio explode
         return float("nan")
     return hi / lo
 
@@ -265,13 +297,15 @@ def extract_colour_features(
     sel = _spatial_mask(mask, lab.shape[:2])
     lab_mean = _select(lab, sel).mean(axis=0)
 
-    roi = _select(lab, sel)
-    hsv = cv2.cvtColor(
-        cv2.cvtColor(arr.astype(np.uint8), cv2.COLOR_RGB2RGB) if arr.dtype != np.uint8 else arr,
-        cv2.COLOR_RGB2HSV,
-    )
-    hsv = cv2.cvtColor(arr, cv2.COLOR_RGB2HSV) if arr.dtype == np.uint8 else hsv
-    hsv_roi = hsv if sel is None else hsv[sel]
+    # ``high_hue_ratio`` is defined on 0-255 sRGB, so it gets the sRGB ROI and not the
+    # CIELAB one. It was previously handed ``_select(lab, sel)``, where ``b*`` is
+    # negative for any real tissue -- so its ``lo < 1.0`` guard fired on every call and
+    # the feature was silently NaN for every patient. Nothing caught it because no
+    # caller had run this path; the unit tests call the function directly with the
+    # uint8 input it documents, and nothing had compared the two.
+    roi_srgb = _select(_as_uint8(arr), sel)
+    hsv_roi = cv2.cvtColor(_as_uint8(arr), cv2.COLOR_RGB2HSV)
+    hsv_roi = hsv_roi if sel is None else hsv_roi[sel]
 
     return ColourFeatureVector(
         lab_l=float(lab_mean[0]),
@@ -279,12 +313,202 @@ def extract_colour_features(
         lab_b=float(lab_mean[2]),
         redness_ratio=redness_ratio(lab_mean),
         erythema_index=erythema_index(lab_mean),
-        high_hue_ratio=high_hue_ratio(roi),
+        high_hue_ratio=high_hue_ratio(roi_srgb),
         otsu_vessel_redness=otsu_vessel_redness(lab),
         hsv_hue=float(np.median(hsv_roi[..., 0])),
         hsv_sat=float(np.median(hsv_roi[..., 1])),
         hsv_val=float(np.median(hsv_roi[..., 2])),
     )
+
+
+def _as_uint8(rgb: NDArray[np.ndarray]) -> NDArray[np.uint8]:
+    """Rescale any accepted input to the uint8 OpenCV's colour conversions require.
+
+    OpenCV defines HSV in terms of 8-bit values, so a float image in ``[0, 1]`` has
+    to be multiplied **up** to 255, not merely cast. The distinction is not cosmetic:
+    casting a ``[0, 1]`` float straight to uint8 truncates almost every pixel to zero,
+    and its hue and saturation medians come out as zeros -- a plausible-looking
+    answer, since a grey conjunctiva has no hue, produced by a conversion bug.
+
+    The same ``> 1.5`` heuristic :func:`srgb_to_linear` uses decides whether the
+    array is already 0-255, so the two cannot disagree about a frame's scale.
+    """
+    arr = np.asarray(rgb)
+    if arr.dtype == np.uint8:
+        return arr
+    values = arr.astype(np.float64)
+    if values.max(initial=0.0) <= 1.5:
+        values = values * 255.0
+    return np.clip(values, 0.0, 255.0).astype(np.uint8)
+
+
+# --------------------------------------------------------------------------- #
+# Exposure normalisation
+# --------------------------------------------------------------------------- #
+
+
+#: Rec. 709 luma weights, for picking the brightest reference pixels.
+_LUMA = np.array([0.2126, 0.7152, 0.0722], dtype=np.float64)
+
+
+def _input_peak(rgb: NDArray[np.ndarray]) -> float:
+    """The value that means "fully bright" for this array, from its dtype.
+
+    ``srgb_to_linear`` guesses this from the data; here the dtype is authoritative,
+    because a dark uint8 frame and a dark float frame are both "all near zero" and a
+    data-driven guess would pick the wrong one.
+    """
+    return 255.0 if np.asarray(rgb).dtype == np.uint8 else 1.0
+
+
+def _reference_pixels(
+    rgb: NDArray[np.ndarray], mask: NDArray[np.ndarray] | None
+) -> NDArray[np.float64]:
+    """The pixels used to estimate the illuminant.
+
+    **The ROI mask is excluded, and that is the substantive decision here.** A
+    grey-world estimate taken over a red conjunctiva is pulled toward red by the very
+    signal being measured, so dividing by it partially undoes the correction. Excluding
+    the ROI leaves the surrounding tissue -- skin, sclera, lid -- to stand in for the
+    illumination, which is what grey-world actually assumes: that the scene average is
+    neutral. The ROI is the subject, not the reference.
+
+    If the mask covers everything, or nothing survives it, the full frame is used and
+    ``None`` is returned from :func:`white_balance`'s perspective -- an estimate over
+    a biased region is worse than one over the whole frame, and this corpus does
+    contain masks that cover 99.99% of the frame.
+    """
+    arr = np.asarray(rgb, dtype=np.float64)
+    if mask is None:
+        return arr.reshape(-1, 3)
+    sel = np.asarray(mask).astype(bool)
+    if sel.shape != arr.shape[:2]:
+        return arr.reshape(-1, 3)
+    outside = arr[~sel]
+    return outside if outside.size else arr.reshape(-1, 3)
+
+
+def white_balance(
+    rgb: NDArray[np.ndarray],
+    mask: NDArray[np.ndarray] | None = None,
+    *,
+    method: str = "grey_world",
+    eps: float = 1e-6,
+) -> NDArray[np.float64]:
+    """Divide out an estimated illuminant, returning float in ``[0, 1]``.
+
+    Parameters
+    ----------
+    rgb
+        ``(H, W, 3)`` uint8, or float already in ``[0, 1]``.
+    mask
+        The ROI. Used **only** to decide which pixels are excluded from the
+        illuminant estimate, never to scale the image. See
+        :func:`_reference_pixels`.
+    method
+        ``"grey_world"`` divides each channel by its reference mean. This is the
+        default because it is the weaker assumption: it needs the scene average to be
+        neutral, whereas ``"white_patch"`` needs the brightest pixel to be a white
+        specular reflection, and on a phone photo of an eye that pixel is usually a
+        corneal highlight covering a handful of pixels.
+    eps
+        Guards the two degenerate frames -- all black and all white -- which would
+        otherwise divide by zero. With it, an all-black frame returns all zeros
+        rather than NaN, which keeps one bad frame from poisoning a mean over 217.
+
+    Returns
+    -------
+    ``(H, W, 3)`` float64 in ``[0, 1]``.
+
+    Notes
+    -----
+    Two design points worth stating because both are choices rather than necessities.
+
+    **Brightness is restored with a single scalar, not per channel.** After the
+    per-channel division the frame has an unbalanced colour balance but the wrong
+    overall lightness; multiplying back by one number derived from the means puts
+    ``L*`` back on the same scale it had before, so a balanced and an unbalanced
+    ``L*`` can be compared. Scaling per channel instead would undo the correction
+    that was just applied.
+
+    **The output is clipped to ``[0, 1]``.** Division can push a pixel above the peak
+    when its channel sits above the reference mean. Clipping discards that, which is
+    a real loss; it is taken because an unclipped array would change ``L*``'s ceiling
+    and make the balanced and unbalanced features non-comparable. Pixels affected are
+    brighter than their channel's frame average, which in these crops is largely
+    sclera and specular highlight rather than conjunctiva.
+    """
+    arr = np.asarray(rgb)
+    if arr.ndim != 3 or arr.shape[2] != 3:
+        raise ValueError(f"expected an (H, W, 3) RGB image, got shape {arr.shape}")
+    if method not in ("grey_world", "white_patch"):
+        raise ValueError(f"unknown method {method!r}; expected grey_world or white_patch")
+
+    values = arr.astype(np.float64) / _input_peak(arr)
+    reference = _reference_pixels(arr, mask)
+
+    if method == "grey_world":
+        illuminant = reference.mean(axis=0)
+    else:
+        # The brightest reference pixel per channel. Taken per channel rather than
+        # once for the frame, because a single bright pixel is usually neutral and
+        # would leave the per-channel ratios untouched.
+        brightest = reference.max(axis=0)
+        luminances = reference @ _LUMA
+        keep = luminances >= 0.99 * luminances.max()
+        if keep.any():
+            brightest = reference[keep].max(axis=0)
+        illuminant = brightest
+
+    # An all-black reference has no illuminant to remove. Returning the frame
+    # untouched is the only safe answer: substituting eps would amplify noise into
+    # a huge number, and substituting a constant would invent an illumination.
+    illuminant = np.where(illuminant > eps, illuminant, 1.0)
+    balanced = values / illuminant
+
+    # One scalar, from the means, so lightness survives.
+    scale = float(values.mean() / balanced.mean()) if balanced.mean() > eps else 1.0
+    return np.clip(balanced * scale, 0.0, 1.0)
+
+
+def balanced_rgb(
+    rgb: NDArray[np.ndarray],
+    mask: NDArray[np.ndarray] | None = None,
+    *,
+    method: str = "grey_world",
+    eps: float = 1e-6,
+) -> NDArray[np.uint8]:
+    """:func:`white_balance` as a uint8 image, for the paths that need one.
+
+    OpenCV's HSV conversion is only defined for uint8, and going through a float
+    array's ``astype(uint8)`` would clip every value above 1.0 to white -- which,
+    after balancing, is most of the bright half of the image. Converting the
+    ``[0, 1]`` float by multiplying through is the difference between a hue and a
+    field of 255s.
+    """
+    return np.round(white_balance(rgb, mask, method=method, eps=eps) * 255.0).astype(np.uint8)
+
+
+def extract_colour_features_balanced(
+    rgb: NDArray[np.ndarray],
+    mask: NDArray[np.ndarray] | None = None,
+    *,
+    method: str = "grey_world",
+) -> ColourFeatureVector:
+    """The same features, measured on the exposure-normalised image.
+
+    Thin wrapper on purpose. Balancing is a change to *what is measured*, not a new
+    kind of measurement, so the two paths share one implementation and a difference
+    between their results is attributable to the division and nothing else. A second
+    copy of the ten feature calculations would make that impossible to establish and
+    would let the two drift.
+
+    The balanced image is rounded back to uint8 before measurement, which is a real
+    approximation and is taken deliberately: it means the balanced and unbalanced
+    paths differ only in the pixels and not in the quantisation, so a comparison
+    between them measures the correction rather than the rounding.
+    """
+    return extract_colour_features(balanced_rgb(rgb, mask, method=method), mask)
 
 
 # --------------------------------------------------------------------------- #

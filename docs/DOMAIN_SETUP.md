@@ -151,12 +151,19 @@ Once the domain is bought and its nameservers point at Cloudflare:
 1. Cloudflare dashboard → Workers & Pages → `hemolux` → **Custom domains**.
 2. Add `hemolux.in` (and `www.hemolux.in` if wanted; redirect one to the other).
 3. Cloudflare issues the certificate automatically; no certificate step.
-4. **Update the absolute URLs.** They are the only place the domain is written
-   down, and they are plain text:
+4. **Update the absolute URLs.** Three files are served and name the host as
+   plain text. A page whose `og:image` points at `hemolux.pages.dev` while it is
+   served from `hemolux.in` is a reachable wrong-host fetch, not a cosmetic
+   detail:
    - `app/web/robots.txt` → the `Sitemap:` line
    - `app/web/sitemap.xml` → the `<loc>` value
-   - `app/web/index.html` → add the `<link rel="canonical">` and Open Graph
-     `og:url` once the domain is live
+   - `app/web/index.html` → add the `<link rel="canonical">`, and change the
+     three `hemolux.pages.dev` values (`og:url`, `og:image`, `twitter:image`)
+
+   The example URLs printed in this file and in `DEPLOY.md` are not served and
+   need no change to keep the site correct, but update them if you want the docs
+   to match. The card itself (`app/web/og.png`) names no host; if its palette or
+   wording changes, redraw it with `python scripts/make_og_image.py`.
 5. Redeploy so the updated files are served:
 
    ```bash

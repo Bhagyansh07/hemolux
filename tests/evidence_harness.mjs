@@ -59,6 +59,29 @@ const report = {
       worst_site: "India",
     },
   ],
+  site_audit: {
+    ordinal: {
+      available: true,
+      confound: "Site is not a biological category in this corpus. (fixture)",
+      screening: {},
+      calibration: {
+        available: true,
+        n_bins: 10,
+        pooled: { n: 43, ece: 0.141, bins: [] },
+        per_site: {
+          India: { n: 20, ece: 0.083, bins: [] },
+          Italy: { n: 23, ece: 0.194, bins: [] },
+        },
+        max_ece_gap: 0.111,
+      },
+    },
+    binary: {
+      available: true,
+      confound: "Site is not a biological category in this corpus. (fixture)",
+      screening: {},
+      calibration: { available: false, reason: "a bare regression head emits no probability" },
+    },
+  },
 };
 
 const sweep = {
@@ -151,5 +174,7 @@ process.stdout.write(
     sweepNearTie: summariseSweep({ ...sweep, selection_gap: 0.05 }).nearTie,
     sweepEmpty: summariseSweep(null),
     sweepNoRows: summariseSweep({ candidates: [] }),
+    siteAudit: summarise(report).siteAudit,
+    confound: summarise(report).confound,
   }),
 );

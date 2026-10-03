@@ -95,3 +95,28 @@ def test_sweep_keeps_the_whole_frame_patients_named(payload: dict) -> None:
 def test_sweep_nothing_to_show_stays_nothing(payload: dict) -> None:
     assert payload["sweepEmpty"] is None
     assert payload["sweepNoRows"] is None
+
+
+def test_site_audit_keeps_pooled_and_per_site_calibration(payload: dict) -> None:
+    ordinal = payload["siteAudit"]["ordinal"]
+    assert ordinal["calibratable"] is True
+    assert ordinal["pooledEce"] == pytest.approx(0.141)
+    assert ordinal["gap"] == pytest.approx(0.111)
+    per_site = {entry["site"]: entry for entry in ordinal["perSite"]}
+    assert sorted(per_site) == ["India", "Italy"]
+    assert per_site["India"]["ece"] == pytest.approx(0.083)
+    assert per_site["India"]["n"] == 20
+    assert per_site["Italy"]["ece"] == pytest.approx(0.194)
+    assert per_site["Italy"]["n"] == 23
+
+
+def test_site_audit_marks_a_head_with_no_probability(payload: dict) -> None:
+    binary = payload["siteAudit"]["binary"]
+    assert binary["calibratable"] is False
+    assert binary["pooledEce"] is None
+    assert binary["gap"] is None
+    assert binary["perSite"] == []
+
+
+def test_the_confound_travels_with_the_audit(payload: dict) -> None:
+    assert payload["confound"].startswith("Site is not a biological category")

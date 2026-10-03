@@ -51,6 +51,34 @@ export function summarise(report) {
     }))
     .sort((a, b) => rank(a.head) - rank(b.head));
 
+  // The site audit carries per-site thresholds and, where the head emits a
+  // probability, per-site calibration. The pooled ECE is the number that hides
+  // the finding, so both the pooled figure and the best-to-worst gap are kept,
+  // and the confound sentence travels with them in the artefact rather than
+  // being paraphrased here.
+  const auditRaw = report.site_audit && typeof report.site_audit === "object" ? report.site_audit : {};
+  const siteAudit = {};
+  let confound = null;
+  for (const head of heads) {
+    const block = auditRaw[head.head];
+    if (!block || typeof block !== "object" || block.available !== true) continue;
+    if (confound === null && typeof block.confound === "string") confound = block.confound;
+    const cal = block.calibration && block.calibration.available === true ? block.calibration : null;
+    const rawPerSite = cal && cal.per_site && typeof cal.per_site === "object" ? cal.per_site : {};
+    const perSiteEce = Object.keys(rawPerSite)
+      .sort()
+      .map((site) => {
+        const curve = rawPerSite[site] || {};
+        return { site, ece: number(curve.ece), n: number(curve.n) };
+      });
+    siteAudit[head.head] = {
+      calibratable: cal !== null,
+      pooledEce: cal ? number(cal.pooled && cal.pooled.ece) : null,
+      gap: cal ? number(cal.max_ece_gap) : null,
+      perSite: perSiteEce,
+    };
+  }
+
   return {
     nPatients: number(corpus.n_patients),
     sites: Object.keys(perSite).sort(),
@@ -59,6 +87,8 @@ export function summarise(report) {
     backbone: corpus.backbone == null ? null : String(corpus.backbone),
     excluded: Array.isArray(corpus.excluded_features) ? corpus.excluded_features.map(String) : [],
     heads,
+    siteAudit,
+    confound,
     commit: provenance.git_commit == null ? null : String(provenance.git_commit),
     fingerprint: provenance.feature_fingerprint == null ? null : String(provenance.feature_fingerprint),
     generated: provenance.generated_at == null ? null : String(provenance.generated_at),
@@ -210,9 +240,37 @@ export function renderEvidence(container, t, report) {
           rmse: fixed(head.rmse),
           r2: fixed(head.r2),
           within: percent(head.within1),
+          gap: fixed(head.siteMaeGap),
+          site: head.worstSite ?? "—",
         }),
       ),
     );
+  }
+
+  const calibratable = data.heads.filter((head) => {
+    const audit = data.siteAudit[head.head];
+    return Boolean(audit && audit.calibratable);
+  });
+  if (calibratable.length) {
+    container.append(heading(t("evidence.calibration_h")));
+    // The confound sentence is the artefact's own, rendered verbatim: it has to
+    // appear wherever a site contrast does, and paraphrasing it in the UI would
+    // let the two drift apart.
+    if (data.confound) container.append(paragraph(data.confound));
+    for (const head of calibratable) {
+      const audit = data.siteAudit[head.head];
+      container.append(
+        line(
+          head.head,
+          t("evidence.calibration_row", {
+            pooled: fixed(audit.pooledEce, 3),
+            gap: fixed(audit.gap, 3),
+          }),
+        ),
+      );
+      const list = audit.perSite.map((entry) => `${entry.site} ${fixed(entry.ece, 3)}`).join(" · ");
+      container.append(paragraph(t("evidence.calibration_sites", { list })));
+    }
   }
 
   container.append(heading(t("evidence.provenance_h")));

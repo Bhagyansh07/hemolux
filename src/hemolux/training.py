@@ -764,7 +764,11 @@ class HeadFit:
     val_hb_true: _FloatArr
     val_hb_pred: _FloatArr
     val_outputs: _FloatArr
-    report: RegressionReport
+    #: Metrics against the test fold, or ``None`` when the fold was never scored
+    #: because the caller passed ``score_test=False``. ``None`` means "not measured",
+    #: which is distinct from a measurement that came out undefined, so the two are
+    #: never allowed to look alike.
+    report: RegressionReport | None
     temperature: float | None = None
     notes: list[str] = field(default_factory=list)
     #: Serialised weights of the selected epoch, so a result can be reproduced and
@@ -892,6 +896,7 @@ def evaluate_fold(
     cfg: TrainConfig,
     verbose: bool = True,
     save_checkpoint: bool = True,
+    score_test: bool = True,
 ) -> HeadFit:
     """Fit on train, select on val, then score the test fold exactly once.
 
@@ -903,6 +908,24 @@ def evaluate_fold(
     :data:`~hemolux.config.ARTIFACT_MODELS` so a published number and a deployable
     artefact come from one training run. The filename carries the head, backbone,
     ROI and fold, so the site-holdout models never overwrite the main split's.
+
+    Parameters
+    ----------
+    score_test
+        Set ``False`` to leave the test fold untouched -- not scored, not read, no
+        predictions produced. This exists for configuration sweeps.
+
+        The usual argument for holding out a test set is that nothing about it
+        informs the model. With a sweep that argument is weaker than it looks,
+        because the sweep's whole purpose is to *compare* configurations, and a
+        test number produced for a configuration that was then discarded has still
+        been read. Recomputing the winner's test score afterwards is only honest if
+        the losing configurations' were never produced in the first place.
+
+        So the guarantee is mechanical rather than a promise: with this flag off
+        the test features are not passed through the network at all, ``report`` is
+        ``None``, and there is nothing to have looked at. :func:`score_test_fold`
+        then scores the chosen weights without retraining them.
     """
     configure_torch()
     torch_device = resolve_device(cfg.device)
@@ -996,9 +1019,23 @@ def evaluate_fold(
 
     # Decoded against centres measured on the TRAINING patients only.
     centres = training_centres(head, train)
-    test_out = _forward_all(model, test.features)
     val_out = _forward_all(model, val.features)
-    test_pred = decode_predictions(head, test_out, centres)
+    if score_test:
+        test_out = _forward_all(model, test.features)
+        test_pred = decode_predictions(head, test_out, centres)
+        test_report: RegressionReport | None = regression_report(test.hb, test_pred)
+    else:
+        # Empty rather than NaN-filled: a row of NaNs looks like a metric that was
+        # computed and came out undefined, which is a different claim from one that
+        # was never computed, and the distinction is the entire point of the flag.
+        #
+        # The trailing shape is copied off the validation output rather than assumed,
+        # because it is not the same for every head: a regression head emits one
+        # value per patient and arrives here as `(N,)`, while the ordinal and
+        # multitask heads emit a distribution and arrive as `(N, n_classes)`.
+        test_out = np.zeros((0, *val_out.shape[1:]), dtype=np.float64)
+        test_pred = np.empty((0,), dtype=np.float64)
+        test_report = None
 
     checkpoint: Path | None = None
     if save_checkpoint:
@@ -1059,11 +1096,68 @@ def evaluate_fold(
         val_hb_true=val.hb,
         val_hb_pred=decode_predictions(head, val_out, centres),
         val_outputs=val_out,
-        report=regression_report(test.hb, test_pred),
+        report=test_report,
         temperature=temperature,
         notes=notes,
         weights=None if best_state is None else {k: v.cpu() for k, v in best_state.items()},
         checkpoint_path=checkpoint,
+    )
+
+
+def validation_report(fit: HeadFit) -> RegressionReport:
+    """Metrics against the validation fold -- the only ones a sweep may select on.
+
+    Wraps :func:`~hemolux.metrics.regression.regression_report` rather than
+    reimplementing it, so the selection metric and the reported metric are computed
+    by the same code and cannot drift apart. That matters more than it sounds: a
+    sweep that ranks configurations by a metric computed slightly differently from
+    the one it then publishes is ranking on something the reader cannot check.
+    """
+    return regression_report(fit.val_hb_true, fit.val_hb_pred)
+
+
+def score_test_fold(fit: HeadFit, features: FeatureSet, fold: Fold) -> HeadFit:
+    """Score an already-fitted configuration's test fold, without retraining.
+
+    This is the second half of :func:`evaluate_fold`'s ``score_test=False`` mode:
+    a sweep fits every candidate without touching test, picks one on validation, and
+    only then hands the winner here. The returned fit carries the same
+    :attr:`HeadFit.weights` and the same chosen epoch, so the published number
+    describes the model that would actually ship -- not a fresh run that happens to
+    be configured the same way and, with a stochastic optimiser, is not the same
+    model.
+    """
+    if fit.report is not None:
+        raise ValueError(
+            f"head {fit.head!r} on fold {fold.name!r} already has test metrics. Scoring "
+            f"again would overwrite them, and the second number would be indistinguishable "
+            f"from the first. Pass the fit returned with score_test=False."
+        )
+    if fit.weights is None:
+        raise ValueError(
+            f"head {fit.head!r} on fold {fold.name!r} has no retained weights, so its test "
+            f"fold cannot be scored without retraining. Fit it with save_checkpoint or keep "
+            f"the returned weights."
+        )
+
+    configure_torch()
+    model = build_head(fit.head, features.feature_dim)
+    model.load_state_dict(fit.weights)
+    model.eval()
+
+    train = features.select(fold.train)
+    test = features.select(fold.test)
+    centres = training_centres(fit.head, train)
+    test_out = _forward_all(model, test.features)
+    test_pred = decode_predictions(fit.head, test_out, centres)
+
+    return replace(
+        fit,
+        test_hb_true=test.hb,
+        test_hb_pred=test_pred,
+        test_outputs=test_out,
+        report=regression_report(test.hb, test_pred),
+        notes=[*fit.notes, "test fold scored once, after selection"],
     )
 
 
@@ -1079,10 +1173,17 @@ def results_row(fit: HeadFit, features: FeatureSet, fold: Fold) -> dict[str, obj
     are all the same numbers, derived once. Rounding happens on the way out.
     """
     test = features.select(fold.test)
+    r = fit.report
+    if r is None:
+        raise ValueError(
+            f"no test metrics for head {fit.head!r} on fold {fold.name!r}: it was trained "
+            f"with score_test=False, so the test fold was never scored. A results row is "
+            f"a test score, so building one here would report the validation fold under a "
+            f"test heading. Call score_test_fold() on the chosen configuration first."
+        )
     spread = subgroup_spread(
         evaluate_subgroups(fit.test_hb_true, fit.test_hb_pred, np.array(test.site, dtype=object))
     )
-    r = fit.report
     return {
         "head": fit.head,
         "n_test": r.n,
@@ -1340,7 +1441,16 @@ def coverage_report(fit: HeadFit) -> dict[str, object]:
     The multitask head's ordinal arm qualifies, because :data:`DECODE_HEAD` routes
     it through the same decode.
     """
-    if DECODE_HEAD.get(fit.head) != "ordinal" or fit.test_outputs.size == 0:
+    if fit.test_outputs.size == 0:
+        return {
+            "available": False,
+            "reason": (
+                "the test fold was not scored (score_test=False), so there is nothing "
+                "to rank. This is a measurement that was not taken, not a head that "
+                "cannot produce an uncertainty."
+            ),
+        }
+    if DECODE_HEAD.get(fit.head) != "ordinal":
         return {
             "available": False,
             "reason": (

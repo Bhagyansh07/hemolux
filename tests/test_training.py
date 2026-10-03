@@ -33,10 +33,12 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import torch
 
 from hemolux.config import WHO_CUTOFF_FEMALE, WHO_CUTOFF_MALE
-from hemolux.data.splits import severity_bin
+from hemolux.data.splits import Fold, severity_bin
 from hemolux.metrics.calibration import HB_BIN_CENTRES
+from hemolux.metrics.regression import regression_report
 from hemolux.training import (
     DECODE_HEAD,
     HEAD_NAMES,
@@ -44,12 +46,17 @@ from hemolux.training import (
     FeatureSet,
     TrainConfig,
     _rounded,
+    coverage_report,
     decode_predictions,
+    evaluate_fold,
     feature_cache_path,
     load_feature_cache,
+    results_row,
     save_feature_cache,
+    score_test_fold,
     severity_labels,
     training_centres,
+    validation_report,
 )
 
 DIM = 4
@@ -592,3 +599,196 @@ def test_a_result_row_survives_json(tmp_path: Path) -> None:
     assert rounded["centres_saved"] is True, "a real bool was mangled into 1"
 
     json.dumps(rounded)  # the actual failure this pins
+
+
+# --------------------------------------------------------------------------- #
+# Holding out the test fold: the property a configuration sweep depends on
+# --------------------------------------------------------------------------- #
+
+#: Four train, two validation, two test, drawn from MIXED so every WHO band and both
+#: sites appear on each side of the split. Two test patients is the smallest that
+#: still lets ``r2`` be computed at all.
+SWEEP_FOLD = Fold(
+    name="sweep0",
+    train=("India/1", "Italy/3", "India/5", "Italy/7"),
+    val=("India/2", "Italy/8"),
+    test=("Italy/4", "India/6"),
+)
+
+CFG = TrainConfig(epochs=4)
+
+
+def test_the_test_fold_can_be_left_unscored() -> None:
+    """``score_test=False`` yields no test numbers at all, rather than empty ones.
+
+    The distinction is the whole point. A row of NaNs reads as "computed, undefined",
+    which is a different and much weaker claim than "never looked at", and a sweep
+    that reports the first under the heading of the second has misrepresented the
+    order in which it saw its data.
+    """
+    fit = evaluate_fold(
+        "regression",
+        SWEEP_FOLD,
+        MIXED,
+        cfg=CFG,
+        verbose=False,
+        save_checkpoint=False,
+        score_test=False,
+    )
+
+    assert fit.report is None
+    assert fit.test_hb_pred.size == 0
+    assert fit.test_outputs.size == 0
+    # The ground truth is deliberately kept. It is part of the corpus rather than
+    # something the run chose to look at, and a caller needs it to confirm the fold
+    # really had the expected number of patients. What must be absent is the
+    # *prediction*, because without one no metric can be formed even by accident.
+    assert fit.test_hb_true.size == len(SWEEP_FOLD.test)
+
+
+def test_an_unscored_test_fold_cannot_move_the_validation_numbers() -> None:
+    """Overwrite every test patient's Hb with 99 and the validation fit is unchanged.
+
+    This is the destructive form of the guarantee, and it is deliberately stronger
+    than asserting that some counter was not incremented. If the test fold were
+    read at all -- to pick an epoch, to fit a temperature, to compute a centre --
+    then moving its ground truth to a value nothing else resembles would change
+    something downstream. Nothing does.
+    """
+    kwargs = {"cfg": CFG, "verbose": False, "save_checkpoint": False, "score_test": False}
+    clean = evaluate_fold("regression", SWEEP_FOLD, MIXED, **kwargs)
+    poisoned = evaluate_fold(
+        "regression",
+        SWEEP_FOLD,
+        _disturb_outside(MIXED, (*SWEEP_FOLD.train, *SWEEP_FOLD.val)),
+        **kwargs,
+    )
+
+    assert np.isfinite(clean.val_hb_pred).all(), "the fixture produced a degenerate fit"
+    assert poisoned.best_epoch == clean.best_epoch
+    assert poisoned.best_val_loss == clean.best_val_loss
+    np.testing.assert_array_equal(poisoned.val_hb_pred, clean.val_hb_pred)
+
+
+def test_validation_report_is_the_same_measurement_as_the_reported_one() -> None:
+    """Selection and reporting go through one function, so they cannot drift.
+
+    A sweep that ranks candidates by a metric computed slightly differently from the
+    one it publishes is ranking on something the reader cannot reproduce.
+    """
+    fit = evaluate_fold(
+        "regression",
+        SWEEP_FOLD,
+        MIXED,
+        cfg=CFG,
+        verbose=False,
+        save_checkpoint=False,
+        score_test=False,
+    )
+
+    assert validation_report(fit) == regression_report(fit.val_hb_true, fit.val_hb_pred)
+
+
+def test_the_winner_can_be_scored_after_selection_without_retraining() -> None:
+    """``score_test_fold`` reports the model that would actually ship.
+
+    The weights are the selected epoch's, carried through untouched. Re-fitting to
+    regenerate a test score would be the obvious shortcut and it is wrong: the
+    optimiser is stochastic, so a second run with the same seed is a different model
+    wearing the same configuration.
+    """
+    fit = evaluate_fold(
+        "regression",
+        SWEEP_FOLD,
+        MIXED,
+        cfg=CFG,
+        verbose=False,
+        save_checkpoint=False,
+        score_test=False,
+    )
+
+    scored = score_test_fold(fit, MIXED, SWEEP_FOLD)
+
+    assert scored.report is not None
+    assert scored.report.n == len(SWEEP_FOLD.test)
+    assert np.isfinite(scored.report.mae)
+    for key, tensor in fit.weights.items():
+        assert torch.equal(scored.weights[key], tensor), f"{key} was not carried through"
+    assert scored.best_epoch == fit.best_epoch
+
+
+def test_a_test_fold_cannot_be_scored_twice() -> None:
+    """Re-scoring would overwrite the number and make the first one unfindable."""
+    fit = evaluate_fold(
+        "regression",
+        SWEEP_FOLD,
+        MIXED,
+        cfg=CFG,
+        verbose=False,
+        save_checkpoint=False,
+        score_test=False,
+    )
+    scored = score_test_fold(fit, MIXED, SWEEP_FOLD)
+
+    with pytest.raises(ValueError, match="already has test metrics"):
+        score_test_fold(scored, MIXED, SWEEP_FOLD)
+
+
+def test_scoring_a_fit_without_weights_says_so() -> None:
+    """The alternative is a silent retrain, which changes the model being scored."""
+    fit = evaluate_fold(
+        "regression",
+        SWEEP_FOLD,
+        MIXED,
+        cfg=CFG,
+        verbose=False,
+        save_checkpoint=False,
+        score_test=False,
+    )
+    stripped = replace(fit, weights=None)
+
+    with pytest.raises(ValueError, match="no retained weights"):
+        score_test_fold(stripped, MIXED, SWEEP_FOLD)
+
+
+def test_a_results_row_refuses_to_report_an_unscored_fit() -> None:
+    """A results row is a test score; making one here would relabel validation as test."""
+    fit = evaluate_fold(
+        "regression",
+        SWEEP_FOLD,
+        MIXED,
+        cfg=CFG,
+        verbose=False,
+        save_checkpoint=False,
+        score_test=False,
+    )
+
+    with pytest.raises(ValueError, match="score_test=False"):
+        results_row(fit, MIXED, SWEEP_FOLD)
+
+    assert results_row(score_test_fold(fit, MIXED, SWEEP_FOLD), MIXED, SWEEP_FOLD)["n_test"] == 2
+
+
+def test_coverage_explains_an_unscored_fold_rather_than_blaming_the_head() -> None:
+    """The unavailable-coverage reason must name the real cause.
+
+    Both branches return ``available: False``, so a swapped condition produces a
+    confident, specific, wrong explanation -- the ordinal head blamed for lacking an
+    uncertainty estimate it does have, on a run where the data simply is not there.
+    """
+    unscored = evaluate_fold(
+        "ordinal",
+        SWEEP_FOLD,
+        MIXED,
+        cfg=CFG,
+        verbose=False,
+        save_checkpoint=False,
+        score_test=False,
+    )
+
+    reason = coverage_report(unscored)["reason"]
+    assert "not scored" in reason
+    assert "bare regression" not in reason
+
+    scored = score_test_fold(unscored, MIXED, SWEEP_FOLD)
+    assert coverage_report(scored)["available"] is True

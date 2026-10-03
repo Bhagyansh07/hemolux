@@ -8,7 +8,7 @@
  * Bump CACHE_VERSION on any change to the shell; the activate handler drops
  * every older cache.
  */
-const CACHE_VERSION = "hemolux-v1";
+const CACHE_VERSION = "hemolux-v2";
 
 const SHELL = [
   "/",
@@ -20,6 +20,7 @@ const SHELL = [
   "/src/app.js",
   "/src/i18n.js",
   "/src/inference.js",
+  "/src/evidence.js",
   "/src/telemetry.js",
 ];
 

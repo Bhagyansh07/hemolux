@@ -70,9 +70,10 @@ import csv
 import json
 import time
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
+import cv2
 import numpy as np
 import torch
 from numpy.typing import NDArray
@@ -88,7 +89,13 @@ from hemolux.config import (
     configure_torch,
     ensure_dirs,
 )
-from hemolux.data.dataset import ConjunctivaDataset, PatientRecord
+from hemolux.data.dataset import (
+    DEFAULT_ROI,
+    ConjunctivaDataset,
+    PatientRecord,
+    load_mask,
+    load_rgb,
+)
 from hemolux.data.splits import Fold, severity_bin
 from hemolux.imagemeta import silence_corrupt_iccp
 from hemolux.losses import (
@@ -105,6 +112,10 @@ from hemolux.metrics.calibration import (
     risk_coverage_curve,
     soft_label,
     temperature_scale,
+)
+from hemolux.metrics.colorimetry import (
+    extract_colour_features,
+    extract_colour_features_balanced,
 )
 from hemolux.metrics.fairness import evaluate_subgroups, subgroup_spread
 from hemolux.metrics.regression import RegressionReport, regression_report
@@ -194,9 +205,26 @@ class TrainConfig:
 # --------------------------------------------------------------------------- #
 
 
+#: The three feature families ``--features`` accepts.
+#:
+#: ``deep`` is a frozen ImageNet backbone's activations. ``colour`` is the hand-crafted
+#: CIELAB and HSV set from :func:`extract_colour_rows`. ``hybrid`` is both
+#: concatenated, which is the configuration that would win if the colour features carry
+#: information the trunk does not.
+#:
+#: The list lives here rather than in the parser so that the CLI, the cache filename and
+#: the extractor cannot disagree about what exists.
+FEATURE_KINDS: tuple[str, ...] = ("deep", "colour", "hybrid")
+
+#: Whether the colour path divides out an estimated illuminant. Recorded in the cache
+#: filename, because a balanced and an unbalanced cache are different features and
+#: reading one as the other would make the comparison meaningless while looking fine.
+BALANCE_KINDS: tuple[str, ...] = ("balanced", "raw")
+
+
 @dataclass(frozen=True)
 class FeatureSet:
-    """Frozen backbone activations for every patient, one row each."""
+    """Frozen features for every patient, one row each."""
 
     patient_ids: tuple[str, ...]
     features: _FloatArr
@@ -207,6 +235,12 @@ class FeatureSet:
     roi: str
     backbone: str
     feature_dim: int
+    #: Which family these features came from, one of :data:`FEATURE_KINDS`. Stored on
+    #: the set and not only in the filename, so that a loaded cache can say what it
+    #: holds -- a colour cache read as a deep one would otherwise be undetectable.
+    kind: str = "deep"
+    #: ``"balanced"`` or ``"raw"``; only meaningful for ``colour`` and ``hybrid``.
+    balance: str = "balanced"
     #: WHO severity band per patient, as the string from
     #: :func:`hemolux.data.splits.severity_bin`. Cached here because every reporting
     #: path wants it and it depends on sex, which is not in the haemoglobin array.
@@ -237,6 +271,8 @@ class FeatureSet:
             roi=self.roi,
             backbone=self.backbone,
             feature_dim=self.feature_dim,
+            kind=self.kind,
+            balance=self.balance,
             severity=tuple(self.severity[i] for i in rows) if self.severity else (),
         )
 
@@ -246,6 +282,111 @@ def _records_to_arrays(records: Sequence[PatientRecord]) -> tuple[tuple[str, ...
     hb = np.array([r.hb for r in records], dtype=np.float64)
     ages = np.array([r.age if r.age is not None else np.nan for r in records], dtype=np.float64)
     return ids, hb, ages
+
+
+#: Column order for a row of :func:`extract_colour_rows`. Written down rather than
+#: derived from a dataclass, because the order reaches a CSV and a cached ``.npz``, and
+#: a reader of that file has no other way to know which column is which. The first ten
+#: are :class:`~hemolux.metrics.colorimetry.ColourFeatureVector`'s fields in
+#: declaration order; the last three are the raw per-channel ROI means, which are the
+#: quantities the exposure-normalisation result was actually measured on.
+COLOUR_COLUMNS: tuple[str, ...] = (
+    "lab_l",
+    "lab_a",
+    "lab_b",
+    "redness_ratio",
+    "erythema_index",
+    "high_hue_ratio",
+    "otsu_vessel_redness",
+    "hsv_hue",
+    "hsv_sat",
+    "hsv_val",
+    "roi_r",
+    "roi_g",
+    "roi_b",
+)
+
+
+def _mask_at_frame_size(rgb: NDArray[np.uint8], mask: NDArray[np.bool_]) -> NDArray[np.bool_]:
+    """Resample a mask onto its frame, if the two disagree.
+
+    **Nearest neighbour, and never anything else.** A linear or bicubic resize of a
+    binary mask produces fractional edges, which threshold back into a ragged border
+    one pixel wide around the whole ROI. That border is then inside the region the
+    illuminant estimate excludes and inside the region whose mean is measured, so it
+    contaminates both.
+
+    211 of the 217 masks in this corpus are 800x1067 against 2984x3984 frames, so this
+    is the normal path, not an edge case. One mask is at full resolution, and
+    ``Italy/2`` covers 99.99% of its frame.
+    """
+    if mask.shape == rgb.shape[:2]:
+        return mask
+    width, height = rgb.shape[1], rgb.shape[0]
+    resized = cv2.resize(mask.astype(np.uint8), (width, height), interpolation=cv2.INTER_NEAREST)
+    return resized > 0
+
+
+def extract_colour_rows(
+    records: Sequence[PatientRecord],
+    *,
+    roi: str = DEFAULT_ROI,
+    balance: bool = True,
+    verbose: bool = True,
+) -> NDArray[np.float64]:
+    """One row of hand-crafted colour features per patient, in :data:`COLOUR_COLUMNS`.
+
+    Read from the **uncropped** frame, and that is the substantive choice rather than an
+    oversight. Cropping to the mask would be consistent with the deep path, but it
+    would also remove the only tissue that can stand in for the illumination: with a
+    tight conjunctival crop, the grey-world estimate is taken over the conjunctiva, and
+    :func:`~hemolux.metrics.colorimetry.white_balance` would divide the signal out by
+    itself. The whole result depends on the reference being somewhere else.
+
+    ``balance=False`` measures the raw frame instead, which is the baseline the
+    normalisation has to beat. Both are exposed rather than one being the default and
+    the other reachable by editing a constant, because a comparison that requires a
+    code edit is a comparison nobody re-runs.
+    """
+    if not records:
+        raise ValueError("cannot extract colour features from an empty record list")
+
+    extract = extract_colour_features_balanced if balance else extract_colour_features
+    rows: list[NDArray[np.float64]] = []
+    started = time.perf_counter()
+
+    for index, record in enumerate(records, start=1):
+        rgb = load_rgb(record.image)
+        path = record.masks.get(roi)
+        raw_mask = load_mask(path) if path is not None else None
+        mask = _mask_at_frame_size(rgb, raw_mask) if raw_mask is not None else None
+
+        measured = extract(rgb, mask)
+        roi_mean = (rgb if mask is None else rgb[mask]).mean(axis=0) / 255.0
+        rows.append(
+            np.array(
+                [
+                    measured.lab_l,
+                    measured.lab_a,
+                    measured.lab_b,
+                    measured.redness_ratio,
+                    measured.erythema_index,
+                    measured.high_hue_ratio,
+                    measured.otsu_vessel_redness,
+                    measured.hsv_hue,
+                    measured.hsv_sat,
+                    measured.hsv_val,
+                    *roi_mean,
+                ],
+                dtype=np.float64,
+            )
+        )
+
+        if verbose and (index % 25 == 0 or index == len(records)):
+            rate = index / max(time.perf_counter() - started, 1e-6)
+            print(f"    colour {index}/{len(records)}  ({rate:.1f} img/s)")
+
+    return np.stack(rows, axis=0)
 
 
 @torch.no_grad()
@@ -260,20 +401,114 @@ def extract_features(
     num_workers: int = 0,
     seed: int = SEED,
     verbose: bool = True,
+    kind: str = "deep",
+    balance: bool = True,
 ) -> FeatureSet:
-    """One forward pass per patient through a frozen ImageNet backbone.
+    """One row of features per patient, from whichever family was asked for.
+
+    ``kind="deep"`` runs the frozen backbone. ``kind="colour"`` runs
+    :func:`extract_colour_rows` and **never touches the backbone**, which is the point
+    of it: the colour path has to be measurable without one, since a frozen ImageNet
+    trunk is the most expensive thing in the pipeline and the cheapest way to find out
+    whether it is needed at all is to run the experiment that does not use it.
+
+    ``kind="hybrid"`` concatenates, and the two blocks are standardised separately
+    before concatenation. Without that the 1024 backbone columns -- whose scale is
+    arbitrary -- would swamp the 13 colour columns, and the sweep would report that
+    hybrid loses when it had only measured that raw concatenation loses.
 
     Augmentation is deliberately off (``train=False``): these are the features a
-    screening run would see, and the head comparison is where augmentation
-    belongs. Turning it on would make the cache un-reusable across configs.
+    screening run would see, and the head comparison is where augmentation belongs.
+    Turning it on would make the cache un-reusable across configs.
+    """
+    if not records:
+        raise ValueError("cannot extract features from an empty record list")
+    if kind not in FEATURE_KINDS:
+        raise ValueError(f"unknown feature kind {kind!r}; expected one of {FEATURE_KINDS}")
+
+    if kind == "colour":
+        return _colour_featureset(records, roi=roi, balance=balance, verbose=verbose)
+
+    deep = _deep_features(
+        records,
+        backbone=backbone,
+        roi=roi,
+        size=size,
+        batch_size=batch_size,
+        device=device,
+        num_workers=num_workers,
+        seed=seed,
+        verbose=verbose,
+    )
+
+    if kind == "deep":
+        return deep
+
+    colour = extract_colour_rows(records, roi=roi, balance=balance, verbose=verbose)
+
+    # Each block standardised on its own, from that block's own mean and spread over
+    # the patients given. Standardising the concatenation instead would divide both
+    # blocks by one shared scale.
+    def _standardise(block: _FloatArr) -> _FloatArr:
+        centred = block - block.mean(axis=0, keepdims=True)
+        spread = centred.std(axis=0, keepdims=True)
+        return centred / np.where(spread > 1e-12, spread, 1.0)
+
+    combined = np.concatenate([_standardise(deep.features), _standardise(colour)], axis=1)
+    return replace(
+        deep,
+        features=combined,
+        feature_dim=int(combined.shape[1]),
+        kind="hybrid",
+        balance="balanced" if balance else "raw",
+    )
+
+
+def _colour_featureset(
+    records: Sequence[PatientRecord],
+    *,
+    roi: str,
+    balance: bool,
+    verbose: bool,
+) -> FeatureSet:
+    """Wrap :func:`extract_colour_rows` in the same envelope as the deep path."""
+    rows = extract_colour_rows(records, roi=roi, balance=balance, verbose=verbose)
+    ids, hb, ages = _records_to_arrays(records)
+    sexes = tuple(r.sex for r in records)
+    return FeatureSet(
+        patient_ids=ids,
+        features=rows,
+        hb=hb,
+        site=tuple(r.site for r in records),
+        sex=sexes,
+        age=ages,
+        roi=roi,
+        backbone="none",
+        feature_dim=int(rows.shape[1]),
+        kind="colour",
+        balance="balanced" if balance else "raw",
+        severity=tuple(severity_bin(h, s) for h, s in zip(hb, sexes, strict=True)),
+    )
+
+
+def _deep_features(
+    records: Sequence[PatientRecord],
+    *,
+    backbone: str,
+    roi: str,
+    size: int,
+    batch_size: int,
+    device: str,
+    num_workers: int,
+    seed: int,
+    verbose: bool,
+) -> FeatureSet:
+    """One forward pass per patient through a frozen ImageNet backbone.
 
     The mask is applied and the frame cropped to the mask bounding box inside
     :class:`~hemolux.data.dataset.ConjunctivaDataset`, not here, so the same crop
     logic is shared with training and deployment.
     """
-    if not records:
-        raise ValueError("cannot extract features from an empty record list")
-
     torch_device = resolve_device(device)
     silence_corrupt_iccp()
 
@@ -325,9 +560,19 @@ def extract_features(
 
 
 def feature_cache_path(features: FeatureSet) -> Path:
-    """Cache location, keyed by everything that changes the numbers."""
+    """Cache location, keyed by everything that changes the numbers.
+
+    ``kind`` and ``balance`` are in the name because they change the numbers. A
+    13-column colour cache and a 1024-column deep cache have different widths, so a
+    width mismatch would be caught -- but ``colour`` and ``hybrid`` can both be 13
+    columns apart from each other in a way a width check would miss, and ``balanced``
+    against ``raw`` is exactly that case: same width, different pixels. Reading the
+    wrong one is not a crash, it is a wrong answer.
+    """
+    tag = features.kind if features.kind == "deep" else f"{features.kind}-{features.balance}"
     return (
-        ARTIFACT_MODELS / f"features_{features.backbone}_{features.roi}_{features.feature_dim}d.npz"
+        ARTIFACT_MODELS
+        / f"features_{features.backbone}_{features.roi}_{tag}_{features.feature_dim}d.npz"
     )
 
 
@@ -343,15 +588,32 @@ def save_feature_cache(features: FeatureSet) -> Path:
         sex=np.array(features.sex, dtype=object),
         age=features.age,
         severity=np.array(features.severity, dtype=object),
-        meta=np.array([features.roi, features.backbone, str(features.feature_dim)], dtype=object),
+        meta=np.array(
+            [
+                features.roi,
+                features.backbone,
+                str(features.feature_dim),
+                features.kind,
+                features.balance,
+            ],
+            dtype=object,
+        ),
     )
     return path
 
 
 def load_feature_cache(path: Path) -> FeatureSet:
-    """Read a cache written by :func:`save_feature_cache`."""
+    """Read a cache written by :func:`save_feature_cache`.
+
+    The last two ``meta`` entries are optional so a cache written before the colour
+    path existed still loads. It comes back as ``deep``/``balanced``, which is what it
+    is: a 1024-column backbone cache.
+    """
     data = np.load(path, allow_pickle=True)
-    roi, backbone, dim = (str(x) for x in data["meta"])
+    meta = [str(x) for x in data["meta"]]
+    roi, backbone, dim = meta[0], meta[1], meta[2]
+    kind = meta[3] if len(meta) > 3 else "deep"
+    balance = meta[4] if len(meta) > 4 else "balanced"
     return FeatureSet(
         patient_ids=tuple(str(x) for x in data["patient_ids"]),
         features=data["features"].astype(np.float64),
@@ -362,6 +624,8 @@ def load_feature_cache(path: Path) -> FeatureSet:
         roi=roi,
         backbone=backbone,
         feature_dim=int(dim),
+        kind=kind,
+        balance=balance,
         severity=tuple(str(x) for x in data["severity"]) if "severity" in data else (),
     )
 
@@ -647,6 +911,33 @@ def evaluate_fold(
     train = features.select(fold.train)
     val = features.select(fold.val)
     test = features.select(fold.test)
+
+    # Checked here, before any tensor is built, because the alternative is far worse
+    # than a crash. A single NaN or infinite feature propagates through the first
+    # forward pass and turns every parameter into NaN, so the loss reads `nan` from
+    # epoch one and never recovers: the run trains for its full schedule, reports a
+    # table of NaNs, and only then fails at the correlation with "need at least 2
+    # finite pairs" -- a message about the metrics that names nothing about the cause.
+    #
+    # The colour path can produce these legitimately. `high_hue_ratio` refuses a patch
+    # whose darkest channel is below 1.0 because the ratio would explode, and a
+    # saturated conjunctiva in a dark crop can legitimately reach zero in blue. So the
+    # check names which columns and which patients, rather than reporting a count.
+    for name, subset in (("train", train), ("val", val), ("test", test)):
+        bad_rows = np.flatnonzero(~np.isfinite(subset.features).all(axis=1))
+        if not bad_rows.size:
+            continue
+        bad_cols = np.flatnonzero(~np.isfinite(subset.features).all(axis=0))
+        columns = ", ".join(
+            COLOUR_COLUMNS[i] if i < len(COLOUR_COLUMNS) else f"feature {i}" for i in bad_cols
+        )
+        patients = ", ".join(subset.patient_ids[i] for i in bad_rows[:3])
+        raise ValueError(
+            f"the {name} fold has {bad_rows.size} patient(s) with a non-finite feature "
+            f"in column(s) {columns} (e.g. {patients}). One NaN makes the loss NaN for "
+            f"the whole run, so this is refused before training rather than reported as "
+            f"an undefined correlation afterwards."
+        )
 
     model = build_head(head, train.feature_dim).to(torch_device)
     optimiser = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)

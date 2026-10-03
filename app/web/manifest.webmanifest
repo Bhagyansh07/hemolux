@@ -1,0 +1,19 @@
+{
+  "name": "Hemolux — haemoglobin screening",
+  "short_name": "Hemolux",
+  "description": "Estimates haemoglobin from a photograph of the conjunctiva. A screening aid, not a diagnosis.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0c0e",
+  "theme_color": "#0b0c0e",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import { applyI18n, getLang, setLang, t } from "./i18n.js";
 import { analyse } from "./inference.js";
+import { reportScreening } from "./telemetry.js";
 
 /* The guide ellipse, in fractions of the captured frame. Kept beside the SVG
  * that draws it so the drawn region and the cropped region cannot drift. The
@@ -152,6 +153,7 @@ function capture() {
 
 async function runAnalysis() {
   if (!frameCanvas) return;
+  const started = performance.now();
   phase = "analysing";
   render();
   result.replaceChildren();
@@ -172,12 +174,14 @@ async function runAnalysis() {
   if (out.status === "ok") {
     phase = "done";
     renderResult(out);
+    reportIfPossible(out, started);
     return;
   }
   if (out.status === "abstain") {
     phase = "done";
     render();
     notice("warning", t("abstain.heading"), t("abstain.body"));
+    reportIfPossible(out, started);
     return;
   }
   if (out.status === "error") {
@@ -229,6 +233,28 @@ function renderResult(out) {
   result.append(label, value, interval, verdict, disclaimer);
 }
 
+/* Telemetry is best effort and never awaited: the estimate is already on
+ * screen before this runs, and a dead edge endpoint must not affect it. When no
+ * model is bundled `out.model_id` is absent, so nothing is sent at all. */
+function bandFor(hb) {
+  if (hb >= 12) return "within_range";
+  if (hb >= 9) return "mild";
+  if (hb >= 7) return "moderate";
+  return "severe";
+}
+
+function reportIfPossible(out, started) {
+  if (!out.model_id) return;
+  reportScreening({
+    model_id: out.model_id,
+    band: out.status === "abstain" ? "abstained" : bandFor(out.hb),
+    hb_hat: out.hb,
+    sigma: out.sigma,
+    quality: out.quality,
+    latency_ms: Math.round(performance.now() - started),
+  });
+}
+
 /* ------------------------------------------------------------------ *
  * Wiring
  * ------------------------------------------------------------------ */
@@ -250,3 +276,12 @@ btnAnalyse.addEventListener("click", runAnalysis);
 setTab("screen");
 renderLang();
 render();
+
+/* The shell, the extractor, the runtime and the model are cached on first load
+ * so a screening still works with no network. Registration failure is ignored:
+ * the app is fully usable online without it. */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}

@@ -67,6 +67,18 @@ Thumbs.db
 !artifacts/reports/
 !artifacts/figures/
 
+# Patient-level rows stay out even though the aggregate report beside them is
+# kept. `predictions.csv` carries one line per patient with age, sex and the
+# measured lab value, so a run over a real corpus would publish exactly what the
+# block at the top of this file exists to keep private. The aggregate metrics it
+# is derived from carry no such row, which is why the directory is re-included
+# and this one file is not.
+#
+# The pattern is placed after `!artifacts/reports/` deliberately: it can only take
+# effect because that line re-includes the directory, and the ordering here is
+# load-bearing rather than incidental.
+artifacts/reports/predictions.csv
+
 # --- local working documents, never published ---
 # An internal planning and specification set. It exists to keep this build
 # self-consistent, not to be read by anyone else, and a public repository has

@@ -365,7 +365,7 @@ def build_sweep_report(
                 "roi": row.candidate.roi,
                 "balance": row.candidate.balance,
                 "head": row.candidate.head,
-                "feature_dim": row.features.feature_dim,
+                "feature_dim": row.features.model_ready().feature_dim,
                 "val_mae": row.val_report.mae,
                 "val_r2": row.val_report.r2,
                 "best_epoch": row.fit.best_epoch,
@@ -404,6 +404,16 @@ def build_sweep_report(
         # claim this artefact exists to support, and a reader should not have to infer
         # it from the schema.
         "test_read": "once, after selection",
+        # Which cached columns no candidate was allowed to use. Named at the top level
+        # as well as left out of every ``feature_dim``, because a sweep table that adds
+        # up to fewer columns than the cache holds should say why in the file itself.
+        "excluded_features": sorted(
+            {
+                name
+                for row in result.rows
+                for name in training.excluded_feature_columns(row.candidate.kind)
+            }
+        ),
         "test": None if result.test_report is None else _rounded(result.test_report.to_dict()),
         "notes": list(result.notes),
     }

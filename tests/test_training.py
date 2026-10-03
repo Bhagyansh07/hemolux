@@ -41,6 +41,7 @@ from hemolux.data.splits import Fold, severity_bin
 from hemolux.metrics.calibration import HB_BIN_CENTRES
 from hemolux.metrics.regression import regression_report
 from hemolux.training import (
+    COLOUR_COLUMNS,
     DECODE_HEAD,
     HEAD_NAMES,
     SEVERITY_CLASSES,
@@ -657,6 +658,120 @@ def test_selecting_rows_carries_the_unmasked_flag_with_them() -> None:
     assert features.select(("India/1", "India/2")).unmasked == ("India/2",)
     assert features.select(("India/1", "India/5")).unmasked == ()
     assert features.unmasked == ("India/2", "Italy/4"), "select mutated the original"
+
+
+# --------------------------------------------------------------------------- #
+# The model boundary: a cached column that is undefined on one balance path
+# --------------------------------------------------------------------------- #
+
+
+def _colour_13() -> FeatureSet:
+    """The fixture's patients as a 13-column colour set with random values."""
+    rng = np.random.default_rng(0)
+    return replace(
+        MIXED,
+        features=rng.normal(size=(len(MIXED.patient_ids), len(COLOUR_COLUMNS))),
+        kind="colour",
+        balance="balanced",
+        backbone="none",
+        feature_dim=len(COLOUR_COLUMNS),
+    )
+
+
+def test_the_model_drops_a_column_that_is_undefined_on_one_balance_path() -> None:
+    """A cached column that is a finding is not a feature.
+
+    ``erythema_index`` needs a positive ``a*``; white-balancing drives ``a*`` to zero
+    or below for 41% of one centre against 8% of the other. Dropping the affected
+    *rows* would remove one centre's patients several times faster than the other's,
+    and imputing would invent a value for exactly the patients whose colour is least
+    well represented. The model drops the column and keeps every patient; the cache
+    keeps the column so the failure stays visible in the report.
+    """
+    colour = _colour_13()
+    features = colour.features.copy()
+    features[[0, 3, 5], COLOUR_COLUMNS.index("erythema_index")] = np.nan
+
+    ready = replace(colour, features=features).model_ready()
+
+    assert ready.feature_dim == len(COLOUR_COLUMNS) - 1
+    assert ready.patient_ids == colour.patient_ids, "dropping a column changed the cohort"
+    np.testing.assert_array_equal(
+        ready.features,
+        np.delete(features, COLOUR_COLUMNS.index("erythema_index"), axis=1),
+    )
+    assert np.isfinite(ready.features).all()
+
+
+def test_a_deep_set_is_already_model_ready() -> None:
+    """Nothing is dropped from a deep set: the excluded columns are colour columns."""
+    deep = make_features(MIXED.patient_ids, tuple(MIXED.hb), MIXED.sex, dim=7)
+
+    assert deep.model_ready() is deep
+
+
+def test_a_hybrid_set_drops_only_its_colour_column() -> None:
+    """The deep block that follows the colour block is left intact."""
+    rng = np.random.default_rng(1)
+    hybrid = replace(
+        _colour_13(),
+        features=rng.normal(size=(len(MIXED.patient_ids), len(COLOUR_COLUMNS) + 5)),
+        kind="hybrid",
+        feature_dim=len(COLOUR_COLUMNS) + 5,
+    )
+
+    ready = hybrid.model_ready()
+
+    assert ready.feature_dim == len(COLOUR_COLUMNS) - 1 + 5
+    np.testing.assert_array_equal(
+        ready.features[:, len(COLOUR_COLUMNS) - 1 :], hybrid.features[:, len(COLOUR_COLUMNS) :]
+    )
+
+
+def test_a_colour_fold_with_an_undefined_column_still_trains() -> None:
+    """The guard refuses a NaN -- but not one the model boundary was told to drop.
+
+    This is the regression the sweep would have hit: a colour candidate whose
+    ``erythema_index`` is NaN for part of the corpus raised at the first forward
+    pass, after every cache had already been extracted.
+    """
+    colour = _colour_13()
+    features = colour.features.copy()
+    features[:, COLOUR_COLUMNS.index("erythema_index")] = np.nan
+
+    fit = evaluate_fold(
+        "regression",
+        SWEEP_FOLD,
+        replace(colour, features=features),
+        cfg=CFG,
+        verbose=False,
+        save_checkpoint=False,
+        score_test=False,
+    )
+
+    assert np.isfinite(fit.val_hb_pred).all()
+
+
+def test_an_unexpected_non_finite_column_is_still_refused() -> None:
+    """Only the named column is dropped; a novel NaN stays a hard error.
+
+    Otherwise the fix for one undefined feature would become a licence to train on
+    silently poisoned input -- the failure the guard exists to prevent.
+    """
+    colour = _colour_13()
+    features = colour.features.copy()
+    features[0, 0] = np.nan  # lab_l, which is not on the excluded list
+
+    with pytest.raises(ValueError, match="non-finite feature"):
+        evaluate_fold(
+            "regression",
+            SWEEP_FOLD,
+            replace(colour, features=features),
+            cfg=CFG,
+            verbose=False,
+            save_checkpoint=False,
+            score_test=False,
+        )
 
 
 def test_the_test_fold_can_be_left_unscored() -> None:

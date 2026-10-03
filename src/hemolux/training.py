@@ -292,6 +292,27 @@ class FeatureSet:
             unmasked=tuple(p for p in patient_ids if p in set(self.unmasked)),
         )
 
+    def model_ready(self) -> FeatureSet:
+        """This set without the columns that cannot be model inputs.
+
+        The cache keeps the full measured vector, because an undefined column is a
+        finding; the model boundary drops the ones that are undefined on one balance
+        path for a site-biased minority (:data:`UNDEFINED_FEATURES`). This keeps every
+        patient in every candidate, so a colour arm is compared against a raw one on the
+        same people rather than on whichever people happened to have a defined value.
+
+        Deterministic in ``kind`` alone, so a fit and the later :func:`score_test_fold`
+        drop the same column and the two agree on the input width without having to
+        carry it between them.
+        """
+        if self.kind == "deep":
+            return self
+        drop = {COLOUR_COLUMNS.index(name) for name in UNDEFINED_FEATURES if name in COLOUR_COLUMNS}
+        if not drop or self.features.shape[1] <= max(drop):
+            return self
+        keep = [i for i in range(self.features.shape[1]) if i not in drop]
+        return replace(self, features=self.features[:, keep], feature_dim=len(keep))
+
 
 def _records_to_arrays(records: Sequence[PatientRecord]) -> tuple[tuple[str, ...], _FloatArr, ...]:
     ids = tuple(r.patient_id for r in records)
@@ -321,6 +342,38 @@ COLOUR_COLUMNS: tuple[str, ...] = (
     "roi_g",
     "roi_b",
 )
+
+#: Colour columns that are defined on one balance path and not the other, and may not
+#: be model inputs.
+#:
+#: ``erythema_index`` is ``100 * log10(1 / redness_ratio)`` and needs a positive
+#: ``a*``. White-balancing drives ``a*`` to zero or below for 58 of 217 patients on the
+#: forniceal path (88 on forniceal-palpebral), and the losses are not spread evenly: 50
+#: of the 58 are Italian against 8 Indian, so the column is undefined for 41% of one
+#: centre and 8% of the other. It is excluded from the model rather than imputed or
+#: dropped per patient. Imputing would invent a value for exactly the patients whose
+#: colour is least well represented, and dropping the rows would remove one centre's
+#: patients several times faster than the other's. It is also a monotone transform of
+#: ``redness_ratio``, which stays, so no measurable quantity leaves with it.
+#:
+#: Kept in the cache and reported rather than deleted there: the NaN pattern *is* the
+#: grey-world failure, and it is worth more written down than erased. The model drops
+#: it; the report names it.
+UNDEFINED_FEATURES: tuple[str, ...] = ("erythema_index",)
+
+#: Colour column names in model order (the cached vector minus :data:`UNDEFINED_FEATURES`),
+#: so an error message names the column the model actually holds and not the one the
+#: cache held before the drop.
+_MODEL_COLOUR_NAMES: tuple[str, ...] = tuple(
+    name for name in COLOUR_COLUMNS if name not in UNDEFINED_FEATURES
+)
+
+
+def excluded_feature_columns(kind: str) -> tuple[str, ...]:
+    """Cached columns that are not model inputs for this feature kind."""
+    if kind == "deep":
+        return ()
+    return tuple(name for name in UNDEFINED_FEATURES if name in COLOUR_COLUMNS)
 
 
 def _mask_at_frame_size(rgb: NDArray[np.uint8], mask: NDArray[np.bool_]) -> NDArray[np.bool_]:
@@ -1020,6 +1073,11 @@ def evaluate_fold(
     torch_device = resolve_device(cfg.device)
     torch.manual_seed(cfg.seed)
 
+    # The model boundary, not the cache. The cached vector keeps the undefined column
+    # as a finding; here it is dropped so a colour arm trains on the same patients as
+    # every other candidate instead of on whichever patients had a defined value.
+    features = features.model_ready()
+
     train = features.select(fold.train)
     val = features.select(fold.val)
     test = features.select(fold.test)
@@ -1041,7 +1099,8 @@ def evaluate_fold(
             continue
         bad_cols = np.flatnonzero(~np.isfinite(subset.features).all(axis=0))
         columns = ", ".join(
-            COLOUR_COLUMNS[i] if i < len(COLOUR_COLUMNS) else f"feature {i}" for i in bad_cols
+            _MODEL_COLOUR_NAMES[i] if i < len(_MODEL_COLOUR_NAMES) else f"feature {i}"
+            for i in bad_cols
         )
         patients = ", ".join(subset.patient_ids[i] for i in bad_rows[:3])
         raise ValueError(
@@ -1230,6 +1289,7 @@ def score_test_fold(fit: HeadFit, features: FeatureSet, fold: Fold) -> HeadFit:
         )
 
     configure_torch()
+    features = features.model_ready()
     model = build_head(fit.head, features.feature_dim)
     model.load_state_dict(fit.weights)
     model.eval()
@@ -1635,7 +1695,11 @@ def build_report(
             "n_patients": len(features.patient_ids),
             "roi": features.roi,
             "backbone": features.backbone,
-            "feature_dim": features.feature_dim,
+            # The width the model sees, not the width the cache holds. They differ by
+            # ``excluded_features`` below, and naming the cache width here would invite
+            # a reader to think a column reached a tensor that never did.
+            "feature_dim": features.model_ready().feature_dim,
+            "excluded_features": list(excluded_feature_columns(features.kind)),
             "per_site": {
                 site: {
                     "n": int(sum(1 for s in features.site if s == site)),

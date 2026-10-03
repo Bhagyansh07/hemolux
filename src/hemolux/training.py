@@ -245,6 +245,17 @@ class FeatureSet:
     #: :func:`hemolux.data.splits.severity_bin`. Cached here because every reporting
     #: path wants it and it depends on sex, which is not in the haemoglobin array.
     severity: tuple[str, ...] = ()
+    #: Patients measured **without** the ROI this set claims, because their record
+    #: holds no mask for it. Their row describes the whole uncropped frame while every
+    #: other row in the same set describes the conjunctiva, so the set is not
+    #: homogeneous and says so here rather than implying it is not.
+    #:
+    #: Not dropped. Six of the 217 real patients have no forniceal mask, and dropping
+    #: them would shift the fold membership for that one configuration -- so the
+    #: forniceal candidate would be compared against the others on a different set of
+    #: people, which is a worse confound than a recorded six-row difference. Kept and
+    #: labelled instead; the count belongs in every report that quotes these numbers.
+    unmasked: tuple[str, ...] = ()
 
     def band_index(self) -> list[int]:
         """Severity as integer class indices, in :data:`SEVERITY_CLASSES` order."""
@@ -274,6 +285,7 @@ class FeatureSet:
             kind=self.kind,
             balance=self.balance,
             severity=tuple(self.severity[i] for i in rows) if self.severity else (),
+            unmasked=tuple(p for p in patient_ids if p in set(self.unmasked)),
         )
 
 
@@ -327,6 +339,18 @@ def _mask_at_frame_size(rgb: NDArray[np.uint8], mask: NDArray[np.bool_]) -> NDAr
     return resized > 0
 
 
+def unmasked_for(records: Sequence[PatientRecord], roi: str) -> tuple[str, ...]:
+    """Patients whose record holds no mask for ``roi``.
+
+    Both feature paths fall back to the whole uncropped frame for these, which is a
+    defensible default -- better than dropping a patient -- but a poor one to leave
+    unstated, because the resulting :class:`FeatureSet` still claims ``roi`` and mixes
+    two geometries inside one column block. This is the one place that decides, so the
+    colour and deep paths cannot disagree about who was affected.
+    """
+    return tuple(r.patient_id for r in records if roi not in r.masks)
+
+
 def extract_colour_rows(
     records: Sequence[PatientRecord],
     *,
@@ -347,6 +371,15 @@ def extract_colour_rows(
     normalisation has to beat. Both are exposed rather than one being the default and
     the other reachable by editing a constant, because a comparison that requires a
     code edit is a comparison nobody re-runs.
+
+    A patient with no mask for ``roi`` is measured on the whole frame; see
+    :func:`unmasked_for`, and :attr:`FeatureSet.unmasked` for why that is recorded
+    rather than hidden or avoided.
+
+    The per-frame mean RGB appended to each row is the mean over the **analysed**
+    pixels -- the mask where there is one, the whole frame where there is not. That is
+    not a detail: it is a column, and for an unmasked patient it means something
+    different from the same column for everyone else.
     """
     if not records:
         raise ValueError("cannot extract colour features from an empty record list")
@@ -362,7 +395,16 @@ def extract_colour_rows(
         mask = _mask_at_frame_size(rgb, raw_mask) if raw_mask is not None else None
 
         measured = extract(rgb, mask)
-        roi_mean = (rgb if mask is None else rgb[mask]).mean(axis=0) / 255.0
+        # One reshape serves both cases, and it has to. The masked branch indexes to
+        # (N, 3), so `mean(axis=0)` averages over patients-of-the-frame and leaves the
+        # three channels. The unmasked branch kept the (H, W, 3) shape, where
+        # `mean(axis=0)` reduces *only* axis 0 and returns (W, 3) -- a per-column mean
+        # that reads as if it were a per-channel one. numpy then refused the row with
+        # "inhomogeneous shape after 1 dimensions", naming neither the patient nor the
+        # ROI, so any run asking for an ROI that some patient lacked was unrunnable:
+        # six of the 217 real ones have no forniceal mask. Reshaping to (N, 3) first
+        # makes the mean over the analysed pixels the same expression either way.
+        roi_mean = (rgb if mask is None else rgb[mask]).reshape(-1, 3).mean(axis=0) / 255.0
         rows.append(
             np.array(
                 [
@@ -488,6 +530,7 @@ def _colour_featureset(
         kind="colour",
         balance="balanced" if balance else "raw",
         severity=tuple(severity_bin(h, s) for h, s in zip(hb, sexes, strict=True)),
+        unmasked=unmasked_for(records, roi),
     )
 
 
@@ -556,6 +599,7 @@ def _deep_features(
         backbone=backbone,
         feature_dim=int(chunks[0].shape[1]),
         severity=tuple(severity_bin(h, s) for h, s in zip(hb, sexes, strict=True)),
+        unmasked=unmasked_for(records, roi),
     )
 
 
@@ -588,6 +632,10 @@ def save_feature_cache(features: FeatureSet) -> Path:
         sex=np.array(features.sex, dtype=object),
         age=features.age,
         severity=np.array(features.severity, dtype=object),
+        # Stored as its own array rather than folded into ``meta``: it is a list of
+        # patient ids whose length varies, and ``meta`` is a fixed-shape tuple that
+        # ``load_feature_cache`` indexes by position.
+        unmasked=np.array(features.unmasked, dtype=object),
         meta=np.array(
             [
                 features.roi,
@@ -605,9 +653,15 @@ def save_feature_cache(features: FeatureSet) -> Path:
 def load_feature_cache(path: Path) -> FeatureSet:
     """Read a cache written by :func:`save_feature_cache`.
 
-    The last two ``meta`` entries are optional so a cache written before the colour
-    path existed still loads. It comes back as ``deep``/``balanced``, which is what it
-    is: a 1024-column backbone cache.
+    The last two ``meta`` entries and the ``unmasked`` array are optional so a cache
+    written before the colour path existed still loads. It comes back as
+    ``deep``/``balanced``, which is what it is: a 1024-column backbone cache.
+
+    A cache with no ``unmasked`` array loads as an empty tuple -- read as "no patient
+    was measured without a mask", which is exactly what was true of every cache written
+    before the field existed, since the set was homogeneous then. It is not read as
+    "unknown", because that would turn a missing field into an unanswerable question
+    about a file that is otherwise perfectly readable.
     """
     data = np.load(path, allow_pickle=True)
     meta = [str(x) for x in data["meta"]]
@@ -627,6 +681,7 @@ def load_feature_cache(path: Path) -> FeatureSet:
         kind=kind,
         balance=balance,
         severity=tuple(str(x) for x in data["severity"]) if "severity" in data else (),
+        unmasked=(tuple(str(x) for x in data["unmasked"]) if "unmasked" in data else ()),
     )
 
 

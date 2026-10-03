@@ -30,6 +30,7 @@ from __future__ import annotations
 import json
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -616,6 +617,46 @@ SWEEP_FOLD = Fold(
 )
 
 CFG = TrainConfig(epochs=4)
+
+
+# --------------------------------------------------------------------------- #
+# The unsegmented fallback: recorded, not hidden
+# --------------------------------------------------------------------------- #
+
+
+def test_a_patient_with_no_mask_for_the_requested_roi_is_named() -> None:
+    """The fallback is a decision, so it has one place that makes it.
+
+    Both feature paths measure such a patient on the whole uncropped frame. That is a
+    reasonable default and a poor one to leave unstated, because the resulting
+    FeatureSet still claims the ROI and mixes two geometries in one column block. Six
+    of the 217 real patients have no forniceal mask, so this is not a corner case.
+    """
+    from hemolux.training import unmasked_for
+
+    bare = SimpleNamespace(patient_id="Italy/1", masks={"palpebral": Path("p.png")})
+    complete = SimpleNamespace(
+        patient_id="India/5", masks={"palpebral": Path("p.png"), "forniceal": Path("f.png")}
+    )
+
+    assert unmasked_for([bare, complete], "forniceal") == ("Italy/1",)
+    assert unmasked_for([bare, complete], "palpebral") == ()
+
+
+def test_selecting_rows_carries_the_unmasked_flag_with_them() -> None:
+    """A training split of an unmasked feature set must still say which rows it holds.
+
+    ``select`` rebuilds the set field by field, so a field added here and not there is
+    silently dropped at exactly the point where it would be reported -- the per-fold
+    analysis. Asserted on the intersection rather than on equality with the full tuple,
+    since selecting three of five patients should name the unmasked ones among *those
+    three*.
+    """
+    features = replace(MIXED, unmasked=("India/2", "Italy/4"))
+
+    assert features.select(("India/1", "India/2")).unmasked == ("India/2",)
+    assert features.select(("India/1", "India/5")).unmasked == ()
+    assert features.unmasked == ("India/2", "Italy/4"), "select mutated the original"
 
 
 def test_the_test_fold_can_be_left_unscored() -> None:

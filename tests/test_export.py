@@ -34,6 +34,7 @@ guessed at.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -465,3 +466,80 @@ def test_the_exported_default_matches_the_training_crop() -> None:
     assert IMAGE_SIZE == 224
     assert list(PREPROCESS_SPEC["input_size"]) == [IMAGE_SIZE, IMAGE_SIZE]
     assert PREPROCESS_SPEC["layout"] == "NCHW", "the browser feeds NCHW, not NHWC"
+
+
+def test_validated_sigma_inverts_the_limits_of_agreement() -> None:
+    """The interval is the test residual, recovered from the reported LoA.
+
+    The report stores ``bias +/- 1.96 sd``, so ``(upper - bias) / 1.96`` is the
+    spread the browser shows. Reading it back rather than recomputing it means
+    the app's interval and the published table cannot drift apart.
+    """
+    from hemolux.export import Z_95, validated_sigma
+
+    results = {
+        "single_split": [
+            {"head": "binary", "bias": 0.0, "loa_upper": 1.0},
+            {"head": "ordinal", "bias": 0.4, "loa_upper": 0.4 + Z_95 * 2.5},
+        ]
+    }
+    assert validated_sigma(results, "ordinal") == pytest.approx(2.5)
+    assert validated_sigma(results, "binary") == pytest.approx(1.0 / Z_95)
+
+
+def test_validated_sigma_is_none_when_no_run_backs_the_head() -> None:
+    from hemolux.export import validated_sigma
+
+    assert validated_sigma(None, "ordinal") is None
+    assert validated_sigma({}, "ordinal") is None
+    assert validated_sigma({"single_split": []}, "ordinal") is None
+    assert validated_sigma({"single_split": [{"head": "binary"}]}, "ordinal") is None
+    # A non-positive spread is a broken row, not a spread.
+    broken = {"single_split": [{"head": "ordinal", "bias": 1.0, "loa_upper": 0.5}]}
+    assert validated_sigma(broken, "ordinal") is None
+
+
+def test_browser_metadata_gates_on_a_real_results_row(tmp_path: Path) -> None:
+    """``validated`` is the switch that stops the app showing an unbacked number."""
+    from hemolux.export import write_browser_metadata
+
+    checkpoint = {
+        "backbone": "mobilenetv3_small_100",
+        "head": "ordinal",
+        "roi": "forniceal_palpebral",
+        "feature_dim": 13,
+    }
+    graph = tmp_path / "hemolux_screen_224.onnx"
+    graph.write_bytes(b"\0")
+
+    report = tmp_path / "results.json"
+    report.write_text(
+        json.dumps({"single_split": [{"head": "ordinal", "bias": 0.4, "loa_upper": 5.2}]}),
+        encoding="utf-8",
+    )
+    path = write_browser_metadata(graph, checkpoint, size=IMAGE_SIZE, results_path=report)
+    meta = json.loads(path.read_text(encoding="utf-8"))
+
+    assert path.name == "hemolux_screen_224.json"
+    assert meta["validated"] is True
+    assert meta["file"] == "hemolux_screen_224.onnx"
+    assert meta["input_size"] == IMAGE_SIZE
+    assert meta["input_name"] == "image"
+    assert meta["kind"] == "deep"
+    assert meta["model_id"] == "mobilenetv3_small_100-ordinal-forniceal_palpebral"
+    assert meta["residual_sigma"] == pytest.approx((5.2 - 0.4) / 1.959963984540054)
+    assert meta["source_report"] == "results.json"
+
+
+def test_browser_metadata_without_a_report_is_inert(tmp_path: Path) -> None:
+    from hemolux.export import write_browser_metadata
+
+    checkpoint = {"backbone": "b", "head": "ordinal", "roi": "r"}
+    graph = tmp_path / "g.onnx"
+    graph.write_bytes(b"\0")
+    written = write_browser_metadata(graph, checkpoint, results_path=tmp_path / "missing.json")
+    meta = json.loads(written.read_text(encoding="utf-8"))
+
+    assert meta["validated"] is False
+    assert meta["residual_sigma"] is None
+    assert meta["source_report"] is None

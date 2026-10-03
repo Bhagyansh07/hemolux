@@ -29,13 +29,14 @@ the ONNX runtime and asserts the output matches PyTorch to within float32 noise.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
 import torch
 from torch import Tensor, nn
 
-from hemolux.config import ARTIFACT_MODELS, IMAGE_SIZE, ensure_dirs
+from hemolux.config import ARTIFACT_MODELS, ARTIFACT_REPORTS, IMAGE_SIZE, ensure_dirs
 from hemolux.data.dataset import PREPROCESS_SPEC
 
 #: ImageNet statistics, read from the one definition the training pipeline uses.
@@ -197,6 +198,94 @@ def verify_onnx(
 def file_size_mb(path: Path) -> float:
     """Model size, which is the number that decides whether it loads on a phone."""
     return path.stat().st_size / (1024 * 1024)
+
+
+#: Two-sided 95% normal quantile. The validation report stores the limits of
+#: agreement (``bias +/- 1.96 sd``), so inverting one recovers the residual
+#: spread without re-deriving it from the per-patient errors.
+Z_95 = 1.959963984540054
+
+
+def validated_sigma(results: dict[str, object] | None, head: str) -> float | None:
+    """The test residual spread for ``head``, or ``None`` when no run backs it.
+
+    ``None`` is not a failure: it is the difference between a graph and a
+    validated graph. Without it the browser reports ``unavailable`` rather than
+    showing an interval it cannot defend.
+    """
+    if not isinstance(results, dict):
+        return None
+    rows = results.get("single_split")
+    if not isinstance(rows, list):
+        return None
+    for row in rows:
+        if not isinstance(row, dict) or row.get("head") != head:
+            continue
+        bias = row.get("bias")
+        upper = row.get("loa_upper")
+        if bias is None or upper is None:
+            return None
+        try:
+            sigma = (float(upper) - float(bias)) / Z_95
+        except (TypeError, ValueError):
+            return None
+        return sigma if sigma > 0 else None
+    return None
+
+
+def write_browser_metadata(
+    graph_path: Path,
+    checkpoint: dict[str, object],
+    *,
+    size: int = IMAGE_SIZE,
+    input_name: str = "image",
+    output_names: tuple[str, ...] = ("hb_gdl", "sigma_gdl", "bin_probs"),
+    results_path: Path | None = None,
+) -> Path:
+    """Write the ``model.json`` the app reads, beside the graph.
+
+    The app gates on ``validated`` and takes its interval from ``residual_sigma``,
+    so both are read from the same report that justified training rather than
+    hard-coded. ``file`` names the graph the metadata describes, which keeps the
+    pair together if the size ever changes. ``build_site.mjs`` stages the sibling
+    file as ``model.json``.
+    """
+    from hemolux import provenance as provenance_module
+
+    report_path = Path(results_path) if results_path else ARTIFACT_REPORTS / "results.json"
+    results: dict[str, object] | None = None
+    if report_path.is_file():
+        results = json.loads(report_path.read_text(encoding="utf-8"))
+
+    head = str(checkpoint.get("head"))
+    sigma = validated_sigma(results, head)
+    model_id = "-".join(
+        str(checkpoint[key]) for key in ("backbone", "head", "roi") if checkpoint.get(key)
+    )
+
+    metadata: dict[str, object] = {
+        "model_id": model_id,
+        "validated": sigma is not None,
+        "kind": "deep",
+        "file": Path(graph_path).name,
+        "input_size": size,
+        "input_name": input_name,
+        "output_names": list(output_names),
+        "layout": PREPROCESS_SPEC["layout"],
+        "scale": PREPROCESS_SPEC["scale"],
+        "mean": list(_MEAN),
+        "std": list(_STD),
+        "roi": checkpoint.get("roi"),
+        "backbone": checkpoint.get("backbone"),
+        "head": checkpoint.get("head"),
+        "feature_dim": checkpoint.get("feature_dim"),
+        "residual_sigma": sigma,
+        "source_report": report_path.name if report_path.is_file() else None,
+        "provenance": provenance_module.snapshot(),
+    }
+    destination = Path(graph_path).with_suffix(".json")
+    destination.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return destination
 
 
 class HemoluxScreen(nn.Module):

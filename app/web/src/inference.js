@@ -26,8 +26,10 @@
 export const IMAGE_SIZE = 224;
 
 /** Where the deploy step stages the exported graph and its metadata. */
-export const MODEL_URL = "/models/hemolux_screen_224.onnx";
+export const MODEL_DIR = "/models/";
 export const MODEL_META_URL = "/models/model.json";
+/** Used only when the metadata carries no `file` field of its own. */
+export const DEFAULT_MODEL_FILE = "hemolux_screen_224.onnx";
 export const MODEL_INPUT_NAME = "image";
 
 /** Mirrors `PREPROCESS_SPEC` in `hemolux.data.dataset`. `scale` is applied here;
@@ -180,7 +182,8 @@ async function createModel() {
     if (!meta || meta.validated !== true) return null;
 
     const ort = await ensureRuntime();
-    const graphResponse = await fetch(MODEL_URL, { cache: "force-cache" });
+    const file = typeof meta.file === "string" && meta.file ? meta.file : DEFAULT_MODEL_FILE;
+    const graphResponse = await fetch(MODEL_DIR + file, { cache: "force-cache" });
     if (!graphResponse.ok) return null;
     const bytes = await graphResponse.arrayBuffer();
     const session = await ort.InferenceSession.create(bytes, { executionProviders: ["wasm"] });

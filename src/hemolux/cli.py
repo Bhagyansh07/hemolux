@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import json
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -678,6 +679,7 @@ def cmd_export(args: argparse.Namespace) -> int:
         file_size_mb,
         load_checkpoint,
         verify_onnx,
+        write_browser_metadata,
     )
 
     checkpoint_path = args.checkpoint or _newest_checkpoint(args.head)
@@ -718,6 +720,21 @@ def cmd_export(args: argparse.Namespace) -> int:
     print(f"    hb    max |diff|: {gaps['hb_max_abs_diff']:.3e} g/dL")
     print(f"    sigma max |diff|: {gaps['sigma_max_abs_diff']:.3e} g/dL")
     print("    verified")
+
+    # The metadata is not decoration: the browser refuses to run a graph whose
+    # ``validated`` flag is false, so a graph exported before its head has a
+    # results row is deliberately inert rather than quietly uncalibrated.
+    metadata_path = write_browser_metadata(path, checkpoint, size=args.size)
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    print(f"\n  wrote {metadata_path}")
+    print(f"    model_id {metadata['model_id']}")
+    if metadata["validated"]:
+        print(f"    validated: residual sigma {metadata['residual_sigma']:.3f} g/dL")
+    else:
+        print(
+            "    NOT validated: no results.json row for this head. Run `hemolux train`\n"
+            '    first; until then the app reports "unavailable".'
+        )
     return 0
 
 

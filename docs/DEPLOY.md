@@ -65,6 +65,16 @@ aggregate reports into `app/web/models/` and `app/web/data/`. Both destinations
 are git-ignored, so the deployed numbers always come from a real run rather than
 from a committed file.
 
+The order matters, and the app enforces it. `hemolux train` writes the
+checkpoint and `artifacts/reports/results.json`; `hemolux export` writes the ONNX
+and a sibling `model.json` recording which graph it is, its input contract, and
+the test residual spread recovered from that report's limits of agreement;
+`build_site.mjs` then stages the newest graph and renames that metadata to
+`/models/model.json`. `inference.js` refuses to run a graph whose metadata is
+missing or whose `validated` flag is false, so an export taken before a results
+row exists leaves the Screen tab reporting "unavailable" rather than showing an
+uncalibrated number.
+
 ## 4. Deploy
 
 ```powershell

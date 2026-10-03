@@ -25,6 +25,8 @@ and with a developer's own ``hemolux train``.
 from __future__ import annotations
 
 import importlib.util
+import json
+import re
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -37,6 +39,11 @@ from hemolux.cli import build_parser, main
 from hemolux.config import IMAGE_SIZE
 
 ROOT = Path(__file__).resolve().parents[1]
+
+#: One list, used by both the help test and the count test. Written out once here
+#: rather than inline in each so that adding a subcommand makes both fail until it has
+#: been added to the module docstring too -- which is the review that should happen.
+SUBCOMMANDS = ("validate", "features", "train", "sweep", "export", "report")
 
 
 def _load(name: str):
@@ -122,17 +129,17 @@ def artefacts(tmp_path_factory: pytest.TempPathFactory) -> SimpleNamespace:
 
 def test_every_subcommand_has_help(capsys: pytest.CaptureFixture) -> None:
     """A subcommand whose ``--help`` crashes is a subcommand nobody can find."""
-    for command in ("validate", "features", "train", "export", "report"):
+    for command in SUBCOMMANDS:
         with pytest.raises(SystemExit) as exit_code:
             main([command, "--help"])
         assert exit_code.value.code == 0, command
         assert "usage:" in capsys.readouterr().out
 
 
-def test_the_subcommands_are_the_documented_five() -> None:
-    """The module docstring lists them; a sixth has to be added there too."""
+def test_the_subcommands_are_the_documented_six() -> None:
+    """The module docstring lists them; a seventh has to be added there too."""
     actions = [a for a in build_parser()._actions if a.dest == "command"]
-    assert set(actions[0].choices) == {"validate", "features", "train", "export", "report"}
+    assert set(actions[0].choices) == set(SUBCOMMANDS)
 
 
 def test_no_subcommand_is_a_usage_error() -> None:
@@ -442,3 +449,241 @@ def test_report_fails_loudly_when_there_is_nothing_to_reprint(
     """
     assert main(["report", "--results", str(tmp_path / "absent.json")]) == 1
     assert "does not exist" in capsys.readouterr().err
+
+
+# --------------------------------------------------------------------------- #
+# sweep: configuration selection that does not read the test fold
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture(scope="module")
+def swept(corpus: Path, artefacts: SimpleNamespace) -> SimpleNamespace:
+    """Run the sweep once over a three-candidate subset; the tests below read the file.
+
+    The colour candidates only, so the fixture stays cheap: featurising with the frozen
+    backbone costs orders of magnitude more than the colour path and none of these tests
+    are about the backbone. Redirected rather than captured for the reason ``trained``
+    documents -- ``capsys`` is function-scoped and this fixture is module-scoped.
+    """
+    import contextlib
+    import io
+
+    sink = io.StringIO()
+    with contextlib.redirect_stdout(sink):
+        code = main(
+            [
+                "sweep",
+                "--data-root",
+                str(corpus),
+                "--epochs",
+                "2",
+                "--only",
+                "colour/palpebral/raw,colour/palpebral/balanced,colour/forniceal/raw",
+            ]
+        )
+    assert code == 0
+    artefacts.sweep_stdout = sink.getvalue()
+    return artefacts
+
+
+def test_the_sweep_records_that_it_never_scored_a_candidate_on_test(
+    swept: SimpleNamespace,
+) -> None:
+    """One row per candidate, and exactly one of them carries a test score.
+
+    This is the artefact the whole command exists to produce, so it is asserted from
+    the file on disk rather than from the objects in memory: what a reader of the JSON
+    can check is the only version that matters.
+    """
+    payload = json.loads((swept.reports / "sweep.json").read_text(encoding="utf-8"))
+
+    assert len(payload["candidates"]) == 3
+    assert payload["test_read"] == "once, after selection"
+    assert payload["test"] is not None
+    assert sum(1 for c in payload["candidates"] if c["selected"]) == 1
+    assert payload["winner"] == next(c["label"] for c in payload["candidates"] if c["selected"])
+
+
+def test_every_losing_candidate_records_validation_only(
+    swept: SimpleNamespace,
+) -> None:
+    """The losing rows carry no key that could hold a test number.
+
+    Not merely "the numbers differ" -- there is nowhere for one to be. A sweep whose
+    discarded candidates carried test metrics would be a test-set search wearing a
+    validation split's results table.
+    """
+    payload = json.loads((swept.reports / "sweep.json").read_text(encoding="utf-8"))
+
+    for row in payload["candidates"]:
+        keys = set(row)
+        assert {"val_mae", "val_r2"} <= keys
+        assert not ({"test_mae", "test_r2", "mae", "r2"} & keys), (
+            f"{row['label']} carries a key that could hold a test score"
+        )
+
+
+def test_the_sweep_table_is_ordered_by_the_metric_it_selected_on(
+    swept: SimpleNamespace,
+) -> None:
+    """Best-first, so the first row is the choice and the reader need not re-sort.
+
+    Asserted on the ordering rather than on any particular winner: the fixture has
+    twelve patients and its numbers are meaningless. What has to hold is that the
+    table is sorted by the metric the run declared, because a table whose order
+    disagrees with its own ``metric`` field sends the reader to the wrong row.
+    """
+    payload = json.loads((swept.reports / "sweep.json").read_text(encoding="utf-8"))
+
+    maes = [c["val_mae"] for c in payload["candidates"]]
+    assert maes == sorted(maes), f"the table is not ordered: {maes}"
+    assert payload["metric"] == "mae"
+    assert payload["candidates"][0]["selected"] is True
+
+
+def test_a_candidate_reports_the_patients_it_measured_without_its_roi(
+    swept: SimpleNamespace,
+) -> None:
+    """A candidate that is not homogeneous says which patients it is not homogeneous for.
+
+    The fixture has two patients with no forniceal mask, so the forniceal candidate
+    measures them on the whole frame while every other row describes the conjunctiva.
+    That configuration is still swept -- dropping six patients would shift the fold for
+    one candidate only, which is the worse confound -- but the count belongs in the
+    artefact, because a table row and its ``roi`` field both read as though the ROI were
+    used for everyone.
+
+    This is also the regression test for the bug that made it unrunnable: ``roi_mean``
+    averaged the wrong axes on an unmasked frame and handed numpy a (H, W, 3) array
+    where a length-13 row belonged, aborting the extraction with "inhomogeneous shape
+    after 1 dimensions" and naming neither the patient nor the ROI.
+    """
+    payload = json.loads((swept.reports / "sweep.json").read_text(encoding="utf-8"))
+
+    counts = {c["label"]: c["n_unmasked"] for c in payload["candidates"]}
+    assert counts["colour / palpebral / raw"] == 0
+    assert counts["colour / palpebral / balanced"] == 0
+    assert counts["colour / forniceal / raw"] == 2
+    assert payload["n_unmasked_by_label"] == {"colour / forniceal / raw": 2}
+
+
+def test_the_sweep_writes_one_row_per_candidate_and_no_patient_rows(
+    swept: SimpleNamespace,
+) -> None:
+    """The CSV is aggregate, so it is safe to commit and adds no patient data.
+
+    ``predictions.csv`` next to it is kept out of the repository for exactly this
+    reason. A sweep writing its own patient table would need the same treatment, and
+    the validation split is the same patients on every run.
+    """
+    with (swept.reports / "sweep.csv").open(encoding="utf-8") as handle:
+        lines = handle.read().strip().splitlines()
+
+    assert len(lines) == 4, "header plus one row per candidate"
+    assert "val_mae" in lines[0]
+    # Patient ids are site-qualified -- ``India/5``, ``Italy/109`` -- so a capitalised
+    # segment followed by a number is the shape to look for. A bare "/" is not enough:
+    # the candidate labels contain them too (``colour / palpebral / raw``).
+    assert not any(
+        re.match(r"^[A-Z][a-z]+/\d+$", line.split(",")[0].strip()) for line in lines[1:]
+    ), "the first column holds a patient identifier"
+
+
+def test_a_filter_that_matches_part_of_the_grid_is_refused(
+    corpus: Path, artefacts: SimpleNamespace, capsys: pytest.CaptureFixture
+) -> None:
+    """A typo must not quietly shrink the experiment.
+
+    Matching three of four terms would otherwise produce a shorter table that reads as
+    complete: every row in it looks like a legitimate result, and the missing
+    configuration is indistinguishable from one that lost. So the run refuses, names
+    what did not match, and prints the spellings it would have accepted.
+    """
+    import contextlib
+    import io
+
+    before = {p.name for p in artefacts.models.glob("features_*.npz")}
+    sink = io.StringIO()
+    with contextlib.redirect_stdout(sink):
+        code = main(
+            [
+                "sweep",
+                "--data-root",
+                str(corpus),
+                "--epochs",
+                "1",
+                "--only",
+                "colour/palpebral/raw,colour/caruncle/raw",
+            ]
+        )
+
+    assert code == 2
+    err = capsys.readouterr().err
+    assert "caruncle" in err
+    assert "accepted spellings" in err, "the command does not say what it would have accepted"
+    assert {p.name for p in artefacts.models.glob("features_*.npz")} == before, (
+        "a refused sweep still extracted features"
+    )
+
+
+def test_a_filter_may_name_a_candidate_without_its_balance(
+    corpus: Path,
+    artefacts: SimpleNamespace,
+) -> None:
+    """``--only deep/palpebral`` selects the deep candidate.
+
+    Deep has no illuminant to vary, so demanding the balance suffix there would make
+    the obvious spelling select nothing. The sweep would still run -- on one fewer
+    candidate than the reader asked for -- which is the failure this avoids.
+    """
+    from hemolux.sweep import Candidate, default_grid, sweep_label
+
+    grid = default_grid()
+    deep = next(c for c in grid if c.kind == "deep" and c.roi == "palpebral")
+
+    spellings = {
+        f"{deep.kind}/{deep.roi}",
+        f"{deep.kind}/{deep.roi}/{deep.balance}",
+        sweep_label(deep),
+    }
+    assert "deep/palpebral" in spellings
+    assert Candidate("deep", "palpebral").balance == "balanced"
+
+
+def test_the_sweep_refuses_a_validation_fold_of_one(
+    corpus: Path, artefacts: SimpleNamespace, capsys: pytest.CaptureFixture
+) -> None:
+    """Selection reads validation for every candidate, so one patient cannot serve.
+
+    Different from ``train``'s refusal, and deliberately so: a training run needs two
+    patients only to compute a correlation afterwards, whereas a sweep needs a
+    comparable number *per candidate*. A fold of one would still let the command run
+    and rank configurations on a single patient each.
+    """
+    import contextlib
+    import io
+
+    before = {p.name for p in artefacts.reports.glob("sweep.*")}
+    sink = io.StringIO()
+    with contextlib.redirect_stdout(sink):
+        code = main(
+            [
+                "sweep",
+                "--data-root",
+                str(corpus),
+                "--epochs",
+                "1",
+                "--val-fraction",
+                "0.95",
+                "--only",
+                "colour/palpebral/raw",
+            ]
+        )
+
+    assert code == 1
+    err = capsys.readouterr().err
+    assert "candidate" in err, "the message does not say why a fold of one is not enough"
+    assert "--val-fraction" in err, "the message does not name the knob"
+    assert {p.name for p in artefacts.reports.glob("sweep.*")} == before, (
+        "a refused sweep still wrote a report"
+    )

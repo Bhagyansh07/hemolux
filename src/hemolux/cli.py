@@ -10,6 +10,7 @@ Subcommands, in the order a fresh checkout needs them::
     hemolux validate   # the corpus matches what the docs claim
     hemolux features   # cache frozen backbone activations
     hemolux train      # experiment C1 plus the cross-site check
+    hemolux sweep      # choose a configuration on validation, read test once
     hemolux export     # ONNX, for the browser
     hemolux report     # print the tables again without retraining
 
@@ -24,6 +25,8 @@ import contextlib
 import sys
 from collections.abc import Sequence
 from pathlib import Path
+
+import numpy as np
 
 from hemolux.config import (
     ARTIFACT_MODELS,
@@ -153,6 +156,32 @@ def build_parser() -> argparse.ArgumentParser:
     p_train.add_argument("--no-site-holdout", action="store_true", help="skip the cross-site check")
     p_train.add_argument("--rebuild-features", action="store_true", help="ignore the feature cache")
 
+    p_sweep = sub.add_parser(
+        "sweep",
+        help="choose a configuration on validation, then read the test fold once",
+    )
+    _parse_common(p_sweep)
+    p_sweep.add_argument("--backbone", default="mobilenetv3_small_100")
+    p_sweep.add_argument("--epochs", type=int, default=40)
+    p_sweep.add_argument("--lr", type=float, default=1e-3)
+    p_sweep.add_argument("--val-fraction", type=float, default=0.2)
+    p_sweep.add_argument("--batch-size", type=int, default=16)
+    p_sweep.add_argument(
+        "--head", default="regression", help="the head to sweep over (one head at a time)"
+    )
+    p_sweep.add_argument(
+        "--metric",
+        default="mae",
+        choices=["mae", "r2"],
+        help="validation metric to select on; MAE by default because that is what a "
+        "screening tool is judged on, and R^2 scores a 0.5 and a 3.0 g/dL miss alike",
+    )
+    p_sweep.add_argument(
+        "--only",
+        help="comma-separated subset of the grid, by label or by kind/roi/balance",
+    )
+    p_sweep.add_argument("--rebuild-features", action="store_true", help="ignore the feature cache")
+
     p_export = sub.add_parser("export", help="write the ONNX graph for in-browser inference")
     _parse_common(p_export)
     # Deliberately no --backbone or --roi. This command reads a trained checkpoint
@@ -228,15 +257,28 @@ def _resolve_features(args: argparse.Namespace):
     the wrong features. Reading the metadata makes the two disagree loudly instead.
     """
     from hemolux.data.dataset import build_records
+
+    kind = getattr(args, "features", "deep")
+    balance = "balanced" if getattr(args, "balance", True) else "raw"
+    records = build_records(args.data_root, verbose=False)
+    return _features_for(kind, args.roi, balance, args, records), records
+
+
+def _features_for(kind: str, roi: str, balance: str, args, records):
+    """The cached FeatureSet for one (kind, roi, balance), extracting it if absent.
+
+    Split out from :func:`_resolve_features` so that a sweep resolving fifteen
+    configurations goes through exactly the same cache-matching code as a single
+    training run. Two copies of this would be two chances for the sweep to build
+    features the single-run path would have rejected as a stale read.
+    """
+    from hemolux.data.dataset import build_records
     from hemolux.training import (
         extract_features,
         feature_cache_path,
         load_feature_cache,
         save_feature_cache,
     )
-
-    kind = getattr(args, "features", "deep")
-    balance = "balanced" if getattr(args, "balance", True) else "raw"
 
     if not getattr(args, "rebuild_features", False) and not getattr(args, "rebuild", False):
         for path in sorted(ARTIFACT_MODELS.glob("features_*.npz")):
@@ -249,7 +291,7 @@ def _resolve_features(args: argparse.Namespace):
                 # leftover, and re-extracting is the correct response either way.
                 continue
             same = (
-                features.roi == args.roi
+                features.roi == roi
                 and features.kind == kind
                 and features.balance == balance
                 # The colour path never loads a backbone, so ``--backbone`` does not
@@ -261,15 +303,18 @@ def _resolve_features(args: argparse.Namespace):
             )
             if same:
                 print(f"  using cached features: {path.name}")
-                return features, build_records(args.data_root, verbose=False)
+                return features
 
     label = kind if kind == "deep" else f"{kind} ({balance})"
-    print(f"\n  extracting features: {label}  backbone={args.backbone} roi={args.roi}")
-    records = build_records(args.data_root, verbose=True)
+    print(f"\n  extracting features: {label}  backbone={args.backbone} roi={roi}")
+    if kind != "colour":
+        # The corpus banner belongs to the extraction that reads the pixels. Repeating
+        # it for each of fifteen configurations would bury the part that matters.
+        build_records(args.data_root, verbose=True)
     features = extract_features(
         records,
         backbone=args.backbone,
-        roi=args.roi,
+        roi=roi,
         batch_size=args.batch_size,
         device=args.device,
         seed=args.seed,
@@ -278,7 +323,7 @@ def _resolve_features(args: argparse.Namespace):
     )
     path = save_feature_cache(features)
     print(f"  wrote {path}  ({feature_cache_path(features).name})")
-    return features, records
+    return features
 
 
 def cmd_features(args: argparse.Namespace) -> int:
@@ -292,6 +337,18 @@ def cmd_features(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_sweep(args: argparse.Namespace) -> int:
+    try:
+        return _sweep(args)
+    except ValueError as exc:
+        # Same shape as cmd_train: the metrics helpers refuse a degenerate split by
+        # raising, and "need at least 2 finite pairs" is not an answer to "why did my
+        # sweep stop". A traceback for a condition fixed by generating a larger fixture
+        # is the wrong shape for a command line.
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+
 def cmd_train(args: argparse.Namespace) -> int:
     try:
         return _train(args)
@@ -303,6 +360,171 @@ def cmd_train(args: argparse.Namespace) -> int:
         # fixture is the wrong shape for a command line.
         print(f"error: {exc}", file=sys.stderr)
         return 1
+
+
+def _sweep(args: argparse.Namespace) -> int:
+    """Select a configuration on validation, then read test exactly once."""
+    from hemolux.data.dataset import build_records
+    from hemolux.data.splits import Fold, Split, severity_bin, stratified_assignments
+    from hemolux.sweep import build_sweep_report, finish_sweep, sweep_grid
+    from hemolux.training import TrainConfig
+
+    set_seed(args.seed)
+    records = build_records(args.data_root, verbose=True)
+    ordered = [r.patient_id for r in records]
+    severities = [severity_bin(r.hb, r.sex) for r in records]
+
+    cfg = TrainConfig(
+        backbone=args.backbone,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        lr=args.lr,
+        val_fraction=args.val_fraction,
+        seed=args.seed,
+        device=args.device,
+    )
+
+    candidates = _sweep_candidates(args)
+    if candidates is None:
+        return 2
+    print(f"\n  {len(candidates)} candidate(s), selecting on validation {args.metric}")
+
+    # Distinct extraction keys only. Two candidates that differ solely in head share
+    # one FeatureSet, and asking for it twice would read every frame twice.
+    keys = sorted({c.cache_key() for c in candidates})
+    print(f"  {len(keys)} distinct feature set(s) to resolve")
+    by_key: dict[str, object] = {}
+    for key in keys:
+        kind, roi, balance = key.split("/")
+        by_key[key] = _features_for(kind, roi, balance, args, records)
+
+    assignments = stratified_assignments(
+        ordered, severities, val_fraction=cfg.val_fraction, seed=cfg.seed
+    )
+    fold = Fold(
+        name=f"sweep-seed{cfg.seed}",
+        train=tuple(p for p in ordered if assignments[p] == Split.TRAIN),
+        val=tuple(p for p in ordered if assignments[p] == Split.VAL),
+        test=tuple(p for p in ordered if assignments[p] == Split.TEST),
+    )
+    for name, members in (("test", fold.test), ("val", fold.val)):
+        if len(members) < 2:
+            print(
+                f"error: the {name} fold holds {len(members)} patient(s) out of "
+                f"{len(ordered)}. Selection reads the validation fold for every "
+                f"candidate, so a fold of one gives nothing to compare. Lower "
+                f"--val-fraction, or use a larger corpus.",
+                file=sys.stderr,
+            )
+            return 1
+    print(
+        f"  {fold.name}: {len(fold.train)} train / {len(fold.val)} val / "
+        f"{len(fold.test)} test  (test not scored until the winner is chosen)"
+    )
+
+    print("\n  sweeping")
+    rows = sweep_grid(candidates, fold, by_key, cfg=cfg)
+
+    header = f"{'configuration':<34}{'dim':>6}{'val MAE':>10}{'val R2':>9}{'epoch':>7}{'sec':>7}{'no ROI':>7}"
+    print("\n  validation, every candidate (no test numbers exist for any of these)")
+    print("  " + header)
+    print("  " + "-" * len(header))
+    # Sorted best-first, so the first row *is* the selection -- the marker cannot
+    # disagree with the choice made a few lines later, because it is the same ordering.
+    ranked = sorted(rows, key=lambda r: (r.score(args.metric), r.label))
+    for i, row in enumerate(ranked):
+        mark = f"  <- best validation {args.metric}" if i == 0 else ""
+        print(
+            f"  {row.label:<32}{row.features.feature_dim:>6}"
+            f"{row.val_report.mae:>10.4f}{row.val_report.r2:>9.4f}"
+            f"{row.fit.best_epoch:>7}{row.fit.train_seconds:>7.1f}"
+            f"{len(row.features.unmasked):>7}{mark}"
+        )
+    partial = {r.label: len(r.features.unmasked) for r in rows if r.features.unmasked}
+    if partial:
+        print(
+            f"\n  no ROI: {len(partial)} configuration(s) measured some patients on the "
+            f"whole frame, because their record holds no mask for the ROI requested."
+        )
+        for label, count in sorted(partial.items()):
+            ids = sorted({p for r in rows if r.label == label for p in r.features.unmasked})
+            print(f"    {label:<38} {count:>3} patient(s): {', '.join(ids)}")
+
+    print("\n  selected on validation, then scoring the test fold once")
+    result = finish_sweep(rows, fold, metric=args.metric)
+    gap = result.selection_gap
+    print(f"  winner: {result.winner.label}")
+    print(
+        f"  selection gap: {gap:.4f} g/dL ahead of the next candidate on validation {args.metric}"
+    )
+    if np.isfinite(gap) and gap < 0.10:
+        # Said here rather than left to the reader. A tenth of a gram per decilitre is
+        # far inside the +/-1.0 clinical acceptability target, so a gap this small means
+        # the sweep has not established a preference -- and a test number chosen from
+        # near-ties is one draw rather than a measurement.
+        print(
+            f"  note: {gap:.4f} g/dL is a near-tie. The grid does not separate these "
+            f"configurations, so treat the test number as one draw from several "
+            f"candidates that are about equally good."
+        )
+
+    r = result.test_report
+    print(f"\n  test fold, {r.n} patients, read once:")
+    print(f"    MAE   {r.mae:.3f} g/dL")
+    print(f"    RMSE  {r.rmse:.3f}")
+    print(f"    R2    {r.r2:+.3f}")
+    print(
+        f"    bias  {r.bias:+.3f}   95% limits of agreement [{r.loa_lower:+.2f}, {r.loa_upper:+.2f}]"
+    )
+    print(f"    within +/-1 g/dL  {100 * r.within_1:.1f}%")
+    print(f"    within +/-2 g/dL  {100 * r.within_2:.1f}%")
+
+    build_sweep_report(result, fold, cfg)
+    print(f"\n  wrote {ARTIFACT_REPORTS / 'sweep.json'}")
+    print(f"  wrote {ARTIFACT_REPORTS / 'sweep.csv'}")
+    return 0
+
+
+def _sweep_candidates(args: argparse.Namespace) -> list | None:
+    """The candidate list: the full grid, or the subset ``--only`` names.
+
+    Three spellings are accepted per candidate -- ``kind/roi/balance``, ``kind/roi``,
+    and the label -- because the balance suffix is meaningless for a ``deep`` candidate
+    that has no illuminant to vary, and demanding it there would make the obvious
+    ``--only deep/palpebral`` quietly select nothing. A filter that matches less than it
+    appears to is worse than one that refuses, because the sweep then reports a shorter
+    grid than the reader asked for and every row of it looks like a complete result.
+
+    A partially-unmatched filter is an error rather than a partial run. Silently
+    dropping one term would leave the reader believing the grid was the one they asked
+    for.
+    """
+    from hemolux.sweep import default_grid, sweep_label
+
+    grid = default_grid(head=args.head)
+    if not args.only:
+        return grid
+
+    wanted = {s.strip() for s in args.only.split(",") if s.strip()}
+
+    def spellings(candidate) -> set[str]:
+        return {
+            f"{candidate.kind}/{candidate.roi}/{candidate.balance}",
+            f"{candidate.kind}/{candidate.roi}",
+            sweep_label(candidate),
+        }
+
+    chosen = [c for c in grid if spellings(c) & wanted]
+    matched = {s for c in chosen for s in spellings(c)}
+    unmatched = wanted - matched
+
+    if unmatched or not chosen:
+        print(f"error: --only {sorted(unmatched or wanted)} matched no candidate.", file=sys.stderr)
+        print("  accepted spellings per candidate:", file=sys.stderr)
+        for c in grid:
+            print(f"    {sweep_label(c):<38} {sorted(spellings(c))}", file=sys.stderr)
+        return None
+    return chosen
 
 
 def _train(args: argparse.Namespace) -> int:
@@ -527,6 +749,7 @@ _COMMANDS = {
     "train": cmd_train,
     "export": cmd_export,
     "report": cmd_report,
+    "sweep": cmd_sweep,
 }
 
 

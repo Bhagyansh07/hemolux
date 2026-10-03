@@ -473,6 +473,52 @@ def test_rebuild_ignores_a_cache_that_is_there(corpus: Path, routed: SimpleNames
     assert "extracting features" in sink.getvalue(), "--rebuild did not re-extract"
 
 
+def test_a_cache_that_does_not_cover_the_corpus_is_not_read(
+    corpus: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Same filename, same fingerprint, different patients.
+
+    The synthetic fixture and the real download write the same cache name and the same
+    digest, so neither the name nor the fingerprint says which corpus a file holds.
+    Reading the fixture's patients for a job whose fold then indexes the real ids fails
+    with a ``KeyError`` that names the symptom and not the cause -- and it fails after
+    the expensive extraction has already run. So the cache must cover exactly the
+    requested patients, not merely the requested configuration.
+    """
+    import contextlib
+    import io
+
+    import hemolux.cli as cli
+    import hemolux.training as training
+    from hemolux.training import load_feature_cache, save_feature_cache
+
+    models = tmp_path / "models"
+    models.mkdir()
+    monkeypatch.setattr(cli, "ARTIFACT_MODELS", models)
+    monkeypatch.setattr(training, "ARTIFACT_MODELS", models)
+
+    argv = ["features", "--data-root", str(corpus), "--features", "colour", "--balance"]
+    with contextlib.redirect_stdout(io.StringIO()):
+        assert main(argv) == 0
+
+    cache = next(models.glob("features_*colour-balanced*.npz"))
+    full = load_feature_cache(cache)
+    assert len(full.patient_ids) > 1, "the fixture is too small to drop a patient from"
+
+    # A cache of the right configuration that is missing a patient, exactly as a
+    # fixture-written one would be next to a real corpus.
+    save_feature_cache(full.select(full.patient_ids[:-1]))
+
+    sink = io.StringIO()
+    with contextlib.redirect_stdout(sink):
+        assert main(argv) == 0
+    text = sink.getvalue()
+
+    assert "using cached features" not in text, "a cache missing a patient was read"
+    assert "extracting features" in text, "the partial cache was not re-extracted"
+    assert set(load_feature_cache(cache).patient_ids) == set(full.patient_ids)
+
+
 def _cached_name(console: str) -> str:
     """The cache filename a run reported reading, or ``""`` if it did not report one."""
     for line in console.splitlines():

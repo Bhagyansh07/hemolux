@@ -282,6 +282,10 @@ def _features_for(kind: str, roi: str, balance: str, args, records):
         save_feature_cache,
     )
 
+    # A cache must hold *this* corpus. The synthetic fixture and the real download
+    # write the same filename and the same fingerprint, so nothing but the rows
+    # themselves says which one a file is.
+    wanted = {record.patient_id for record in records}
     if not getattr(args, "rebuild_features", False) and not getattr(args, "rebuild", False):
         for path in sorted(ARTIFACT_MODELS.glob("features_*.npz")):
             try:
@@ -310,6 +314,11 @@ def _features_for(kind: str, roi: str, balance: str, args, records):
                 # because for colour features the trunk genuinely is not part of what
                 # the numbers are. It still matters for hybrid, which concatenates it.
                 and (kind == "colour" or features.backbone == args.backbone)
+                # And it must cover exactly the requested patients. Without this a
+                # fixture's twelve patients were read for a candidate the real fold
+                # then indexed by id, failing with a KeyError that named the symptom
+                # and not the cause.
+                and set(features.patient_ids) == wanted
             )
             if same:
                 print(f"  using cached features: {path.name}")

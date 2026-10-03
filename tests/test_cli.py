@@ -278,6 +278,169 @@ def test_train_writes_a_checkpoint_and_the_three_reports(trained: SimpleNamespac
     assert (trained.reports / "predictions.csv").is_file()
 
 
+# --------------------------------------------------------------------------- #
+# Cache routing: each configuration reaches its own file, and nobody else's
+# --------------------------------------------------------------------------- #
+
+#: The four configurations the CLI offers, as flag lists. ``balanced`` and ``raw`` are
+#: both listed deliberately: they are the pair that a width check cannot separate, since
+#: both are thirteen columns wide and differ only in which pixels were divided.
+CONFIGS: tuple[tuple[str, ...], ...] = (
+    ("--features", "colour", "--balance"),
+    ("--features", "colour", "--no-balance"),
+    ("--features", "deep"),
+    ("--features", "hybrid", "--no-balance"),
+)
+
+
+@pytest.fixture(scope="module")
+def routed(corpus: Path, artefacts: SimpleNamespace) -> SimpleNamespace:
+    """Extract all four configurations, then ask for each of them again.
+
+    Two runs of each, because the property under test is only visible on the second: the
+    first has nothing to read, so it would extract and pass whatever the matching logic
+    did. The set of cache filenames is recorded *before* each run as well as the console
+    text, because the module-scoped ``artefacts`` directory is shared with the ``trained``
+    and ``swept`` fixtures and already holds their files -- so the question is always
+    "what did *this* run add or read", never "what exists".
+    """
+    import contextlib
+    import io
+
+    seen: dict[str, SimpleNamespace] = {}
+    for flags in CONFIGS:
+        argv = ["features", "--data-root", str(corpus), *flags]
+        before = {p.name for p in artefacts.models.glob("features_*.npz")}
+
+        first = io.StringIO()
+        with contextlib.redirect_stdout(first):
+            assert main(argv) == 0, f"{flags} failed on its first run"
+
+        second = io.StringIO()
+        with contextlib.redirect_stdout(second):
+            assert main(argv) == 0, f"{flags} failed on its second run"
+
+        seen[" ".join(flags)] = SimpleNamespace(
+            before=before,
+            after={p.name for p in artefacts.models.glob("features_*.npz")},
+            first=first.getvalue(),
+            second=second.getvalue(),
+        )
+
+    artefacts.routed = seen
+    return artefacts
+
+
+def test_each_configuration_writes_a_cache_of_its_own(routed: SimpleNamespace) -> None:
+    """Four runs resolve to four distinct files, and none overwrites another.
+
+    Not asserted as "each run added a file", because the shared ``artefacts`` fixture is
+    also written by the ``trained`` and ``swept`` fixtures and may already hold one of
+    them -- a run that finds its own cache is correct, not broken. So the property is
+    stated on the thing that holds either way: at most one file is created per run, and
+    the four configurations end up on four different names.
+
+    That is the assertion that catches a collision. If two configurations resolved to the
+    same filename, the second would add nothing *and* replace the first's file -- a
+    balanced cache lost to a raw one, with no error and no gap in the output, because
+    every row of the result would still be finite.
+    """
+    for label, run in routed.routed.items():
+        added = run.after - run.before
+        assert len(added) <= 1, f"{label} added {sorted(added)}, expected at most one file"
+        assert "wrote" in run.first or "using cached features" in run.first, (
+            f"{label} neither wrote a cache nor said it read one: {run.first!r}"
+        )
+
+    names = [_cached_name(run.second) for run in routed.routed.values()]
+    assert all(names), f"a run reported no cache read: {names}"
+    assert len(set(names)) == len(CONFIGS), f"two configurations share a cache: {names}"
+
+
+def test_balanced_and_raw_never_read_each_others_cache(routed: SimpleNamespace) -> None:
+    """Same width, same ROI, same backbone, different pixels.
+
+    This is the substitution the metadata-based match in ``_features_for`` exists to
+    prevent, and the one a dimension check would miss: a ``balanced`` cache has 13
+    columns and so does a ``raw`` one. Both runs must report reading their own file, and
+    neither may report the other's -- a raw cache read as balanced is a wrong number with
+    no crash and no gap in the output, because every row is finite and the table still
+    prints.
+    """
+    balanced = _cached_name(routed.routed["--features colour --balance"].second)
+    raw = _cached_name(routed.routed["--features colour --no-balance"].second)
+
+    assert balanced and raw, "one of the two did not report a cache read"
+    assert balanced != raw, f"both runs read {balanced}"
+    assert "balanced" in balanced, f"the balanced run read {balanced}"
+    assert "raw" in raw, f"the raw run read {raw}"
+
+
+def test_a_colour_cache_is_never_read_for_hybrid(routed: SimpleNamespace) -> None:
+    """A thirteen-column colour cache is not a 1037-column hybrid cache.
+
+    Included alongside the balanced/raw pair because the two together are the whole
+    argument for matching on recorded metadata rather than on filename or width: one
+    substitution a width check catches, one it cannot, and only the second is dangerous.
+    """
+    hybrid = _cached_name(routed.routed["--features hybrid --no-balance"].second)
+    colour_raw = _cached_name(routed.routed["--features colour --no-balance"].second)
+
+    assert hybrid and colour_raw
+    assert hybrid != colour_raw, f"the hybrid run read the colour cache {colour_raw}"
+    assert "hybrid" in hybrid, f"the hybrid run read {hybrid}"
+    assert "colour" in colour_raw
+
+
+def test_the_second_run_reads_a_cache_rather_than_re_extracting(
+    routed: SimpleNamespace,
+) -> None:
+    """Every configuration is cached on its second run.
+
+    The cheap half of the contract. The expensive half -- a cache written by different
+    code is refused -- is in ``tests/test_fingerprint.py``, and the two are complementary:
+    without this one, a fingerprint that refused everything would pass unnoticed behind a
+    feature that always re-extracts.
+    """
+    for label, run in routed.routed.items():
+        assert "using cached features" in run.second, f"{label} re-extracted its own cache"
+        assert "extracting features" not in run.second, f"{label} re-extracted its own cache"
+
+
+def test_rebuild_ignores_a_cache_that_is_there(corpus: Path, routed: SimpleNamespace) -> None:
+    """``--rebuild`` has to reach the same resolver the automatic path uses.
+
+    If it took a different route it would be untested by everything above, and the flag
+    would work while the cache-matching logic it is meant to override quietly did not.
+    """
+    import contextlib
+    import io
+
+    argv = [
+        "features",
+        "--data-root",
+        str(corpus),
+        "--features",
+        "colour",
+        "--balance",
+        "--rebuild",
+    ]
+    sink = io.StringIO()
+    with contextlib.redirect_stdout(sink):
+        assert main(argv) == 0
+
+    assert "using cached features" not in sink.getvalue(), "--rebuild still read the cache"
+    assert "extracting features" in sink.getvalue(), "--rebuild did not re-extract"
+
+
+def _cached_name(console: str) -> str:
+    """The cache filename a run reported reading, or ``""`` if it did not report one."""
+    for line in console.splitlines():
+        if "using cached features:" in line:
+            return line.rsplit(":", 1)[-1].strip()
+    return ""
+
+
 def test_the_checkpoint_records_what_the_export_needs(trained: SimpleNamespace) -> None:
     """The three things a graph cannot be rebuilt without.
 

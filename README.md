@@ -56,7 +56,7 @@ stub.
 | Deploy pipeline (Cloudflare Pages, no build step) | scripted; [docs/DEPLOY.md](docs/DEPLOY.md) |
 | Measured results | not yet published; [EVALS.md](EVALS.md) is a stub |
 
-870 tests, all passing, `ruff check .` clean.
+878 tests, all passing, `ruff check .` clean.
 
 ## The claims this project tests
 
@@ -148,7 +148,7 @@ scripts/
   build_site.mjs            stages the model and reports into the site
   vendor_runtime.mjs        copies onnxruntime-web in, so no CDN is called
 docs/DEPLOY.md               the free deploy path, end to end
-tests/                      870 tests
+tests/                      878 tests
 ```
 
 ## Dataset
@@ -189,7 +189,7 @@ wheels that this project never uses. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Development
 
 ```bash
-pytest                                  # 870 tests
+pytest                                  # 878 tests
 ruff check .                            # lint
 hemolux validate                        # what is actually in the corpus
 hemolux train                           # train every head, report, write checkpoints

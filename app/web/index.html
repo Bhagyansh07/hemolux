@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Hemolux — non-invasive haemoglobin screening</title>
+    <meta
+      name="description"
+      content="Hemolux estimates haemoglobin from a photograph of the lower-eyelid conjunctiva. It is a screening aid, not a diagnosis."
+    />
+    <meta name="theme-color" content="#0b0c0e" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="masthead__inner">
+        <a class="wordmark" href="#screen">HEMO<span>LUX</span></a>
+
+        <nav class="nav" aria-label="Primary">
+          <button class="nav__tab" type="button" data-tab="screen" data-i18n="nav.screen">
+            Screen
+          </button>
+          <button class="nav__tab" type="button" data-tab="evidence" data-i18n="nav.evidence">
+            Evidence
+          </button>
+          <button class="nav__tab" type="button" data-tab="method" data-i18n="nav.method">
+            Method &amp; limits
+          </button>
+          <button class="nav__tab" type="button" data-tab="about" data-i18n="nav.about">
+            About
+          </button>
+        </nav>
+
+        <div class="utilities">
+          <span class="pill" id="net-pill" data-state="ok" title="Photos never leave this device">
+            <span class="pill__dot" aria-hidden="true"></span>
+            <span id="net-text" data-i18n="state.online">On device</span>
+          </span>
+          <button class="pill" id="lang-toggle" type="button" aria-label="Switch language">
+            <span id="lang-label">हिंदी</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="shell">
+      <!-- ------------------------------------------------------------ *
+           Screen — capture, then readout
+           ------------------------------------------------------------ -->
+      <section id="panel-screen" class="panel panel--flush" role="tabpanel" aria-label="Screen">
+        <div class="stage" id="stage">
+          <video id="video" playsinline muted autoplay hidden></video>
+          <img id="still" alt="" hidden />
+
+          <svg
+            class="stage__guide"
+            viewBox="0 0 300 400"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <ellipse
+              cx="150"
+              cy="212"
+              rx="96"
+              ry="70"
+              fill="none"
+              stroke="#4cc2ff"
+              stroke-width="1.5"
+              stroke-dasharray="7 7"
+              opacity="0.9"
+            />
+            <line x1="150" y1="196" x2="150" y2="228" stroke="#4cc2ff" stroke-width="1" opacity="0.6" />
+            <line x1="134" y1="212" x2="166" y2="212" stroke="#4cc2ff" stroke-width="1" opacity="0.6" />
+          </svg>
+
+          <div class="stage__empty" id="stage-empty">
+            <span class="label" data-i18n="screen.empty_label">Camera off</span>
+            <p data-i18n="screen.empty_body">
+              Pull the lower eyelid down gently so the pink inner lining is visible, then hold the
+              phone about 15 cm away in even light.
+            </p>
+          </div>
+        </div>
+
+        <div class="actionbar">
+          <button class="btn btn--primary" id="btn-start" type="button" data-i18n="screen.start">
+            Turn on camera
+          </button>
+          <button class="btn btn--primary" id="btn-capture" type="button" data-i18n="screen.capture" hidden>
+            Take photo
+          </button>
+          <button class="btn" id="btn-retake" type="button" data-i18n="screen.retake" hidden>
+            Retake
+          </button>
+          <button class="btn btn--primary" id="btn-analyse" type="button" data-i18n="screen.analyse" hidden>
+            Analyse
+          </button>
+        </div>
+
+        <div class="readout" id="result" aria-live="polite">
+          <span class="label" data-i18n="screen.guide_label">Capture guidance</span>
+          <p data-i18n="screen.guide_body">
+            Fill the outline with the pink inner lining of the lower eyelid. Keep the phone steady;
+            avoid flash and coloured lighting.
+          </p>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------ *
+           Evidence — filled from the real validation sweep
+           ------------------------------------------------------------ -->
+      <section id="panel-evidence" class="panel panel__body" role="tabpanel" aria-label="Evidence" hidden>
+        <h1 data-i18n="evidence.title">Evidence</h1>
+        <p data-i18n="evidence.intro">
+          Every figure on this page is produced by the frozen evaluation run in this repository.
+          Nothing here is illustrative.
+        </p>
+        <div id="evidence-metrics">
+          <div class="notice" data-tone="neutral">
+            <span class="notice__mark" aria-hidden="true"></span>
+            <div>
+              <p style="margin: 0" data-i18n="evidence.pending">
+                Results will be published here once the validation sweep selects a model and the
+                frozen test run completes.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------ *
+           Method & limits
+           ------------------------------------------------------------ -->
+      <section id="panel-method" class="panel panel__body" role="tabpanel" aria-label="Method and limits" hidden>
+        <h1 data-i18n="method.title">Method &amp; limits</h1>
+
+        <h2 data-i18n="method.how_h">How it works</h2>
+        <p data-i18n="method.how_b">
+          The camera photographs the conjunctiva, the pink lining inside the lower eyelid, which
+          carries the same capillary blood as a finger-prick. A regression model estimates
+          haemoglobin in g/dL from that image. All computation happens on your device.
+        </p>
+
+        <h2 data-i18n="method.cannot_h">What it cannot do</h2>
+        <p data-i18n="method.cannot_b">
+          This is a screening aid, not a diagnosis. It cannot confirm anaemia, cannot rule it out,
+          and cannot replace a laboratory blood test. A result outside the normal range is a reason
+          to seek a blood test, not a reason to start treatment.
+        </p>
+        <p data-i18n="method.emergency_b">
+          Do not use it in an emergency or to make a treatment decision.
+        </p>
+
+        <h2 data-i18n="method.fair_h">Fairness</h2>
+        <p data-i18n="method.fair_b">
+          Performance is reported separately by skin tone (ITA°) and by imaging site. Where the
+          model is not equally reliable, that gap is stated rather than averaged away.
+        </p>
+      </section>
+
+      <!-- ------------------------------------------------------------ *
+           About / colophon
+           ------------------------------------------------------------ -->
+      <section id="panel-about" class="panel panel__body" role="tabpanel" aria-label="About" hidden>
+        <h1 data-i18n="about.title">About</h1>
+        <div class="metric-row">
+          <span class="metric-row__name" data-i18n="about.dataset">Dataset</span>
+          <span class="metric-row__value">Eyes Defy Anemia</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-row__name" data-i18n="about.licence">Licence</span>
+          <span class="metric-row__value">MIT</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-row__name" data-i18n="about.runtime">Runtime</span>
+          <span class="metric-row__value">ONNX Runtime Web</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-row__name" data-i18n="about.build">Build</span>
+          <span class="metric-row__value" id="build-hash">dev</span>
+        </div>
+        <p class="faint" style="margin-top: 16px" data-i18n="about.privacy">
+          No photograph leaves this device. The app makes no network request with image data.
+        </p>
+      </section>
+    </main>
+
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>

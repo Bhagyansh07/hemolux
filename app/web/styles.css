@@ -1,0 +1,578 @@
+/* Hemolux — clinical instrumentation, not a consumer health app.
+ *
+ * The design language is a laboratory analyser readout: a near-black ground, one
+ * signal colour for measurement, monospace tabular numerals so a value does not
+ * shift width while it is read. There is no component library; the primitives
+ * below are the whole set. The rules that keep it from reading as a generated
+ * landing page live in brain/08_UI_SPEC.md section 9 and are followed literally:
+ * no gradients, no glass, no emoji, no pill-shaped everything, no centred hero.
+ *
+ * Dark is the default because the screen is often held close to a face in poor
+ * light. Light is a fully specified theme, not an auto-inversion.
+ */
+
+:root {
+  --bg: #0b0c0e;
+  --surface: #141619;
+  --surface-2: #1c1f24;
+  --text: #e8eaed;
+  --text-dim: #9aa0a6;
+  --text-faint: #6b7178; /* restricted to 14px and above — see spec §7 */
+  --signal: #4cc2ff;
+  --ok: #3ddc97;
+  --warn: #ffb84d;
+  --risk: #ff5c5c;
+  --line: #262a30;
+
+  --radius-1: 4px;
+  --radius-2: 8px;
+  --radius-3: 12px;
+
+  --sans: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --deva: "Noto Sans Devanagari", Inter, system-ui, sans-serif;
+
+  --step: 4px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --surface-2: #eef0f3;
+    --text: #14161a;
+    --text-dim: #5a6169;
+    --text-faint: #7d848c;
+    --signal: #0a72c4;
+    --ok: #12855b;
+    --warn: #9a5b00;
+    --risk: #c0272d;
+    --line: #d9dde2;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+:lang(hi) {
+  font-family: var(--deva);
+}
+
+/* ------------------------------------------------------------------ *
+ * Type scale. Numbers are always monospace and always tabular.
+ * ------------------------------------------------------------------ */
+
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+}
+
+h1 {
+  font-size: 24px;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: 18px;
+}
+
+p {
+  margin: 0 0 12px;
+  color: var(--text-dim);
+  max-width: 68ch;
+}
+
+a {
+  color: var(--signal);
+  text-underline-offset: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-radius: var(--radius-1);
+}
+
+/* ------------------------------------------------------------------ *
+ * Layout
+ * ------------------------------------------------------------------ */
+
+.shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 24px 96px;
+}
+
+@media (max-width: 1024px) {
+  .shell {
+    max-width: 640px;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Header — wordmark, flat tab nav, language toggle, offline pill
+ * ------------------------------------------------------------------ */
+
+.masthead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+
+.masthead__inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.wordmark {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.wordmark span {
+  color: var(--signal);
+}
+
+.nav {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.nav__tab {
+  appearance: none;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 12px;
+  min-height: 36px;
+  border-radius: var(--radius-2);
+  cursor: pointer;
+}
+
+.nav__tab:hover {
+  color: var(--text);
+}
+
+.nav__tab[aria-current="page"] {
+  color: var(--text);
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+.utilities {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  padding: 5px 9px;
+  min-height: 28px;
+}
+
+.pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+
+.pill[data-state="ok"] .pill__dot {
+  background: var(--ok);
+}
+
+.pill[data-state="offline"] .pill__dot {
+  background: var(--text-faint);
+}
+
+/* ------------------------------------------------------------------ *
+ * Panels and cards — the measuring surfaces
+ * ------------------------------------------------------------------ */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-3);
+}
+
+.panel--flush {
+  padding: 0;
+  overflow: hidden;
+}
+
+.panel__body {
+  padding: 24px;
+}
+
+.rule {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 24px 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * Capture
+ * ------------------------------------------------------------------ */
+
+.stage {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  max-height: 62vh;
+  background: #000;
+  overflow: hidden;
+}
+
+.stage > video,
+.stage > canvas,
+.stage > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stage__guide {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.stage__empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--text-dim);
+  padding: 24px;
+}
+
+.actionbar {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+@media (max-width: 480px) {
+  .actionbar {
+    position: sticky;
+    bottom: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Buttons
+ * ------------------------------------------------------------------ */
+
+.btn {
+  appearance: none;
+  font: inherit;
+  font-weight: 500;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: var(--radius-2);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn:hover {
+  border-color: var(--text-faint);
+}
+
+.btn--primary {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: #04121c;
+  font-weight: 600;
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------------ *
+ * Result card — the most important screen in the product
+ * ------------------------------------------------------------------ */
+
+.readout {
+  padding: 24px;
+}
+
+.readout__value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.readout__number {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(48px, 14vw, 72px);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.readout__unit {
+  font-family: var(--mono);
+  font-size: 18px;
+  color: var(--text-dim);
+}
+
+.readout__interval {
+  font-family: var(--mono);
+  font-size: 15px;
+  color: var(--text-dim);
+}
+
+/* Band bar: estimate position against the WHO ticks. Text carries the verdict;
+ * colour is only the third, redundant channel (spec §7). */
+
+.bandbar {
+  margin: 20px 0 8px;
+}
+
+.bandbar__track {
+  position: relative;
+  height: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.bandbar__fill {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  border-radius: 999px;
+  background: var(--signal);
+}
+
+.bandbar__tick {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--line);
+}
+
+.bandbar__legend {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.verdict[data-band="ok"] {
+  color: var(--ok);
+}
+.verdict[data-band="warn"] {
+  color: var(--warn);
+}
+.verdict[data-band="risk"] {
+  color: var(--risk);
+}
+
+.disclaimer {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+/* ------------------------------------------------------------------ *
+ * Abstaining — guidance, never an alarm (spec §4)
+ * ------------------------------------------------------------------ */
+
+.notice {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  background: var(--surface-2);
+}
+
+.notice__mark {
+  flex: none;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--warn);
+}
+
+.notice[data-tone="neutral"] .notice__mark {
+  background: var(--text-faint);
+}
+
+.notice[data-tone="error"] .notice__mark {
+  background: var(--risk);
+}
+
+/* ------------------------------------------------------------------ *
+ * Skeleton loading, in the shape of the final content
+ * ------------------------------------------------------------------ */
+
+.skeleton {
+  background: var(--surface-2);
+  border-radius: var(--radius-1);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton--line {
+  height: 12px;
+  margin: 8px 0;
+}
+
+.skeleton--number {
+  height: 56px;
+  width: 180px;
+  margin: 12px 0;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Evidence / method prose blocks
+ * ------------------------------------------------------------------ */
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.metric-row:last-child {
+  border-bottom: 0;
+}
+
+.metric-row__name {
+  color: var(--text);
+}
+
+.metric-row__value {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.dim {
+  color: var(--text-dim);
+}
+
+.faint {
+  color: var(--text-faint);
+  font-size: 14px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

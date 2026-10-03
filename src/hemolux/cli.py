@@ -28,6 +28,7 @@ from pathlib import Path
 
 import numpy as np
 
+from hemolux import provenance as provenance_module
 from hemolux.config import (
     ARTIFACT_MODELS,
     ARTIFACT_REPORTS,
@@ -488,7 +489,7 @@ def _sweep(args: argparse.Namespace) -> int:
     print(f"    within +/-1 g/dL  {100 * r.within_1:.1f}%")
     print(f"    within +/-2 g/dL  {100 * r.within_2:.1f}%")
 
-    build_sweep_report(result, fold, cfg)
+    build_sweep_report(result, fold, cfg, provenance=provenance_module.snapshot(args.data_root))
     print(f"\n  wrote {ARTIFACT_REPORTS / 'sweep.json'}")
     print(f"  wrote {ARTIFACT_REPORTS / 'sweep.csv'}")
     return 0
@@ -634,7 +635,14 @@ def _train(args: argparse.Namespace) -> int:
             )
 
     print("\n  building the results file")
-    payload = build_report(fits, features, fold, cfg=cfg, site_rows=site_rows)
+    payload = build_report(
+        fits,
+        features,
+        fold,
+        cfg=cfg,
+        site_rows=site_rows,
+        provenance=provenance_module.snapshot(args.data_root),
+    )
     print(f"  wrote {ARTIFACT_REPORTS / 'results.json'}")
     print(f"  wrote {ARTIFACT_REPORTS / 'results.csv'}")
     print(f"  wrote {ARTIFACT_REPORTS / 'predictions.csv'}")

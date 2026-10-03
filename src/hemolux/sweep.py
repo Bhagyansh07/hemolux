@@ -328,7 +328,13 @@ def finish_sweep(
     )
 
 
-def build_sweep_report(result: SweepResult, fold: Fold, cfg: TrainConfig) -> dict:
+def build_sweep_report(
+    result: SweepResult,
+    fold: Fold,
+    cfg: TrainConfig,
+    *,
+    provenance: dict | None = None,
+) -> dict:
     """Write ``sweep.json`` and ``sweep.csv``, and return the payload.
 
     Aggregate only -- one row per *candidate*, never per patient. The single-split
@@ -346,6 +352,7 @@ def build_sweep_report(result: SweepResult, fold: Fold, cfg: TrainConfig) -> dic
     # ``artifacts/`` during a test run, and the test would then fail on a file the run
     # had put somewhere else entirely. The message would have named a missing path and
     # pointed at nothing.
+    from hemolux import provenance as provenance_module
     from hemolux import training
 
     ensure_dirs()
@@ -373,6 +380,7 @@ def build_sweep_report(result: SweepResult, fold: Fold, cfg: TrainConfig) -> dic
     ]
 
     payload: dict = {
+        "provenance": provenance_module.snapshot() if provenance is None else provenance,
         "config": asdict(cfg),
         "metric": result.metric,
         "fold": {

@@ -81,6 +81,7 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader
 
 from hemolux import fingerprint
+from hemolux import provenance as provenance_module
 from hemolux.config import (
     ARTIFACT_MODELS,
     ARTIFACT_REPORTS,
@@ -1571,11 +1572,17 @@ def build_report(
     cfg: TrainConfig,
     site_rows: Sequence[dict[str, object]] = (),
     extra: dict[str, object] | None = None,
+    provenance: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """Assemble the machine-readable results file the reports are written from."""
     ensure_dirs()
     rows = [_rounded(results_row(f, features, fold)) for f in fits]
     payload: dict[str, object] = {
+        # Always present, and computed rather than passed by default. A caller that
+        # forgets to supply the data root gets ``corpus: null`` -- visibly incomplete --
+        # instead of a schema with no provenance field at all, which would read as a
+        # format that never had one.
+        "provenance": provenance_module.snapshot() if provenance is None else provenance,
         "config": asdict(cfg),
         "corpus": {
             "n_patients": len(features.patient_ids),

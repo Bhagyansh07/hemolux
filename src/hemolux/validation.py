@@ -35,7 +35,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 
@@ -233,33 +233,60 @@ class CorpusReport:
         }
 
 
-def _looks_like_the_documented_corpus(root: Path) -> bool:
-    """Whether ``root`` is the download the literal contract assertions describe.
+#: The three things a corpus directory can be, as far as anything in this repository can
+#: tell from the outside. ``documented`` means "has both site directories and does not
+#: mark itself synthetic", which is deliberately permissive -- see :func:`corpus_kind`.
+CorpusKind = Literal["documented", "synthetic", "unknown"]
 
-    The discriminator has to be more than shape. The generated fixture reproduces
-    the real layout deliberately -- same site directories, same workbook names, same
-    mask naming -- because a fixture that standardised any of those would stop
-    covering the branches it exists to cover. A check for ``India/`` and ``Italy/``
-    therefore matches the fixture too, and an eight-patient corpus produced six
-    FAILs about a 217-patient download, which is how a validator teaches its reader
-    to ignore red lines.
 
-    So the fixture marks itself. ``SYNTHETIC_MARKER`` is the prefix the generator
-    already puts on every file it writes, and its presence is taken as the corpus
-    declaring what it is. Beyond that, the documented root is accepted on path, and
-    anything else with both site directories is accepted on shape -- so a user who
-    unpacked the download somewhere custom still gets the checks that apply to them.
-    Deliberately a heuristic rather than a gate: ``--contract`` is one flag away.
+def corpus_kind(root: Path) -> CorpusKind:
+    """Classify a corpus directory, once, for both the validator and the reports.
+
+    The discriminator has to be more than shape. The generated fixture reproduces the
+    real layout deliberately -- same site directories, same workbook names, same mask
+    naming -- because a fixture that standardised any of those would stop covering the
+    branches it exists to cover. A check for ``India/`` and ``Italy/`` therefore matches
+    the fixture too, and an eight-patient corpus produced six FAILs about a 217-patient
+    download, which is how a validator teaches its reader to ignore red lines.
+
+    So the fixture marks itself. ``SYNTHETIC_MARKER`` is the prefix the generator already
+    puts on every file it writes, and its presence is taken as the corpus declaring what
+    it is. Beyond that, the documented root is accepted on path, and anything else with
+    both site directories is accepted on shape -- so a user who unpacked the download
+    somewhere custom still gets the checks that apply to them. Deliberately a heuristic
+    rather than a gate: ``--contract`` is one flag away.
+
+    Three outcomes rather than a boolean because the reports need the third one. A
+    results file has to say whether it came from the real corpus or from the fixture, and
+    "not the documented corpus" conflates "the fixture" with "a directory that does not
+    look like either" -- which is the difference between a number that means something
+    small and a directory that was pointed at by mistake.
     """
     documented = Path(DEFAULT_ROOT)
     try:
         if root.resolve() == documented.resolve():
-            return True
+            return "documented"
     except OSError:
         pass
-    if any(entry.name.startswith(SYNTHETIC_MARKER) for entry in root.iterdir()):
-        return False
-    return (root / "India").is_dir() and (root / "Italy").is_dir()
+    try:
+        synthetic = any(entry.name.startswith(SYNTHETIC_MARKER) for entry in root.iterdir())
+    except OSError:
+        # A root that cannot be listed is not a corpus. Reported as unknown rather than
+        # raising: this is called from report-writing paths that should not fail late.
+        return "unknown"
+    if synthetic:
+        return "synthetic"
+    return "documented" if (root / "India").is_dir() and (root / "Italy").is_dir() else "unknown"
+
+
+def looks_like_the_documented_corpus(root: Path) -> bool:
+    """Whether ``root`` is the download the literal contract assertions describe.
+
+    Kept as its own name because that is the question the validator is asking, and
+    ``corpus_kind(root) == "documented"`` at the call site reads as the different
+    question the reports are asking.
+    """
+    return corpus_kind(root) == "documented"
 
 
 def validate_corpus(
@@ -306,7 +333,7 @@ def validate_corpus(
             f"fetch it with `kaggle datasets download -d eyasdefy/eyes-defy-anemia` and "
             f"unpack into data/raw/."
         )
-    run_contract = _looks_like_the_documented_corpus(root) if contract is None else bool(contract)
+    run_contract = looks_like_the_documented_corpus(root) if contract is None else bool(contract)
 
     report = CorpusReport(root=root)
 

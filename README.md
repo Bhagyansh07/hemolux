@@ -41,14 +41,15 @@ about a screen anyone can look at.
 | Synthetic corpus fixture | implemented, 12 tests |
 | Image metadata warning filter | implemented, 17 tests |
 | Feature-cache fingerprint | implemented, 18 tests |
+| Provenance stamp on tracked reports | implemented, 16 tests |
 | Training loop and feature cache | implemented, 53 tests |
 | Validation-only configuration sweep | implemented, 17 tests |
 | ONNX export, verified against PyTorch | implemented, 21 tests |
-| Command line, all six subcommands end to end | implemented, 32 tests |
+| Command line, all six subcommands end to end | implemented, 34 tests |
 | Web front end and telemetry Worker | not yet in this tree |
 | Measured results | not yet published; [EVALS.md](EVALS.md) is a stub |
 
-775 tests, all passing, `ruff check .` clean.
+793 tests, all passing, `ruff check .` clean.
 
 ## The claims this project tests
 
@@ -107,6 +108,7 @@ src/hemolux/
   training.py            five heads, the training loop, the feature cache
   validation.py          the corpus validator behind `hemolux validate`
   fingerprint.py         what a cached feature set must notice about the code
+  provenance.py          what a tracked results file must record about its run
   sweep.py               configuration selection on validation, test read once
   export.py              ONNX graph assembly, and the check against PyTorch
   cli.py                 the six subcommands
@@ -125,7 +127,7 @@ src/hemolux/
 scripts/
   quality_sweep.py          measures the corpus to justify QUALITY_ABSTAIN
   make_synthetic_fixture.py writes a corpus in the real layout, for CI
-tests/                      775 tests
+tests/                      793 tests
 ```
 
 ## Dataset
@@ -166,7 +168,7 @@ wheels that this project never uses. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Development
 
 ```bash
-pytest                                  # 775 tests
+pytest                                  # 793 tests
 ruff check .                            # lint
 hemolux validate                        # what is actually in the corpus
 hemolux train                           # train every head, report, write checkpoints

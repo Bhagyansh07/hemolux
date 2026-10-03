@@ -35,6 +35,7 @@ import numpy as np
 import pytest
 import torch
 
+from hemolux import fingerprint
 from hemolux.cli import build_parser, main
 from hemolux.config import IMAGE_SIZE
 
@@ -276,6 +277,27 @@ def test_train_writes_a_checkpoint_and_the_three_reports(trained: SimpleNamespac
     assert (trained.reports / "results.json").is_file()
     assert (trained.reports / "results.csv").is_file()
     assert (trained.reports / "predictions.csv").is_file()
+
+
+def test_the_results_file_says_which_corpus_produced_it(trained: SimpleNamespace) -> None:
+    """The tracked results file has to be quotable without checking the shell history.
+
+    ``artifacts/reports/`` is committed, so ``results.json`` is the version of the run a
+    reader will see. The generated fixture reproduces the real corpus layout deliberately,
+    which means this file and one from the 217-patient download have the same shape and
+    very different numbers -- and until this block existed, nothing inside either said
+    which was which. Asserted on the fixture's own value: ``"synthetic"``, not
+    ``"documented"``.
+    """
+    payload = json.loads((trained.reports / "results.json").read_text(encoding="utf-8"))
+    block = payload["provenance"]
+
+    assert block["corpus"] == "synthetic", "the fixture did not identify itself as one"
+    assert block["data_root"], "the root the run used is not recorded"
+    assert block["feature_fingerprint"] == fingerprint.digest(), (
+        "the report and the feature cache disagree about which code produced them"
+    )
+    assert block["generated_at"], "the run has no timestamp"
 
 
 # --------------------------------------------------------------------------- #
@@ -665,6 +687,28 @@ def test_the_sweep_records_that_it_never_scored_a_candidate_on_test(
     assert payload["test"] is not None
     assert sum(1 for c in payload["candidates"] if c["selected"]) == 1
     assert payload["winner"] == next(c["label"] for c in payload["candidates"] if c["selected"])
+
+
+def test_the_sweep_file_says_which_corpus_produced_it(swept: SimpleNamespace) -> None:
+    """The same claim as the single-split report, on the file that carries the winner.
+
+    This is the artefact ``EVALS.md`` will quote, so it is also the one most likely to be
+    lifted out of context. It names its corpus and its code for the same reason.
+    """
+    payload = json.loads((swept.reports / "sweep.json").read_text(encoding="utf-8"))
+    block = payload["provenance"]
+
+    assert block["corpus"] == "synthetic"
+    assert block["feature_fingerprint"] == fingerprint.digest()
+    assert block["generated_at"]
+    assert set(block) == {
+        "data_root",
+        "corpus",
+        "feature_fingerprint",
+        "git_commit",
+        "git_dirty",
+        "generated_at",
+    }
 
 
 def test_every_losing_candidate_records_validation_only(

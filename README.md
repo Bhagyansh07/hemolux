@@ -56,7 +56,44 @@ stub.
 | Deploy pipeline (Cloudflare Pages, no build step) | scripted; [docs/DEPLOY.md](docs/DEPLOY.md) |
 | Measured results | not yet published; [EVALS.md](EVALS.md) is a stub |
 
-878 tests, all passing, `ruff check .` clean.
+899 tests, all passing, `ruff check .` clean.
+
+## How it works
+
+```mermaid
+flowchart TB
+    subgraph device["Visitor device - no photograph leaves it"]
+        cam["Camera or file picker"] --> gate{"Quality gate"}
+        gate -- fail --> retake["Retake"]
+        gate -- pass --> prep["Crop ROI, resize 224, normalise"]
+        prep --> ort["onnxruntime-web WASM"]
+        ort --> decode["Ordinal decode: Hb and interval"]
+        decode --> ui["Hb estimate, WHO band, or abstain"]
+    end
+
+    subgraph cloud["Cloudflare free tier"]
+        fn["Pages Functions /api/v1/telemetry, /api/v1/feedback"]
+        db[("D1")]
+        fn --> db
+    end
+    ui -.->|"metadata only"| fn
+
+    subgraph builder["Builder machine, offline"]
+        corpus[("Eyes Defy Anemia corpus")]
+        feat["Feature extraction"]
+        sweep["Validation-only sweep"]
+        train["Train the heads"]
+        export["ONNX export + PyTorch parity"]
+        model[("model.onnx")]
+        corpus --> feat --> sweep --> train --> export --> model
+    end
+    model --> ort
+```
+
+The two halves never exchange a pixel. The builder machine turns a corpus that
+cannot be redistributed into one small graph; the browser runs that graph locally
+and sends back counts, a model id and a latency, which is the only reason a free
+tier is enough.
 
 ## The claims this project tests
 
@@ -148,7 +185,7 @@ scripts/
   build_site.mjs            stages the model and reports into the site
   vendor_runtime.mjs        copies onnxruntime-web in, so no CDN is called
 docs/DEPLOY.md               the free deploy path, end to end
-tests/                      878 tests
+tests/                      899 tests
 ```
 
 ## Dataset
@@ -189,7 +226,7 @@ wheels that this project never uses. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Development
 
 ```bash
-pytest                                  # 878 tests
+pytest                                  # 899 tests
 ruff check .                            # lint
 hemolux validate                        # what is actually in the corpus
 hemolux train                           # train every head, report, write checkpoints

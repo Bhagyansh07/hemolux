@@ -80,6 +80,7 @@ from numpy.typing import NDArray
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
 
+from hemolux import fingerprint
 from hemolux.config import (
     ARTIFACT_MODELS,
     ARTIFACT_REPORTS,
@@ -487,15 +488,6 @@ def extract_features(
         return deep
 
     colour = extract_colour_rows(records, roi=roi, balance=balance, verbose=verbose)
-
-    # Each block standardised on its own, from that block's own mean and spread over
-    # the patients given. Standardising the concatenation instead would divide both
-    # blocks by one shared scale.
-    def _standardise(block: _FloatArr) -> _FloatArr:
-        centred = block - block.mean(axis=0, keepdims=True)
-        spread = centred.std(axis=0, keepdims=True)
-        return centred / np.where(spread > 1e-12, spread, 1.0)
-
     combined = np.concatenate([_standardise(deep.features), _standardise(colour)], axis=1)
     return replace(
         deep,
@@ -504,6 +496,24 @@ def extract_features(
         kind="hybrid",
         balance="balanced" if balance else "raw",
     )
+
+
+def _standardise(block: _FloatArr) -> _FloatArr:
+    """Zero mean and unit spread per column, leaving a dead column at zero.
+
+    Each block standardised on its own, from that block's own mean and spread over the
+    patients given. Standardising the concatenation instead would divide both blocks by
+    one shared scale, and the 1024 backbone columns -- already close to unit variance --
+    would have been shrunk by the colour block's spread and then had it restored
+    unevenly. The two blocks are not commensurable, and this is the step that says so.
+
+    At module level rather than nested in the caller because the cache fingerprint
+    hashes it by name: a nested closure cannot be looked up, and an unhashed
+    normalisation is exactly the sort of change a stale cache would hide.
+    """
+    centred = block - block.mean(axis=0, keepdims=True)
+    spread = centred.std(axis=0, keepdims=True)
+    return centred / np.where(spread > 1e-12, spread, 1.0)
 
 
 def _colour_featureset(
@@ -636,6 +646,10 @@ def save_feature_cache(features: FeatureSet) -> Path:
         # patient ids whose length varies, and ``meta`` is a fixed-shape tuple that
         # ``load_feature_cache`` indexes by position.
         unmasked=np.array(features.unmasked, dtype=object),
+        # The filename keys on what the caller chose; this keys on the code that did
+        # the work. Without it a cache written before a fix keeps being read after it,
+        # which is a wrong number rather than an error -- see hemolux/fingerprint.py.
+        fingerprint=np.array(fingerprint.digest(), dtype=object),
         meta=np.array(
             [
                 features.roi,
@@ -662,8 +676,25 @@ def load_feature_cache(path: Path) -> FeatureSet:
     before the field existed, since the set was homogeneous then. It is not read as
     "unknown", because that would turn a missing field into an unanswerable question
     about a file that is otherwise perfectly readable.
+
+    Raises :class:`~hemolux.fingerprint.StaleFeatureCacheError` when the recorded code
+    fingerprint is absent or differs from this build's. **Absent counts as a mismatch,
+    not as permission.** A file with no fingerprint is a file written by a build that
+    could not say what produced it, which is the same epistemic position as a file
+    written by code that has since changed -- and the only safe reading of the first is
+    the second. Callers are expected to re-extract and carry on; see
+    :func:`hemolux.cli._features_for`, which does.
     """
     data = np.load(path, allow_pickle=True)
+    current = fingerprint.digest()
+    recorded = str(data["fingerprint"]) if "fingerprint" in data else None
+    if recorded != current:
+        raise fingerprint.StaleFeatureCacheError(
+            f"{path.name} was written by different code "
+            f"(recorded {recorded or 'nothing'}, this build is {current}); "
+            f"re-extract rather than reuse it"
+        )
+
     meta = [str(x) for x in data["meta"]]
     roi, backbone, dim = meta[0], meta[1], meta[2]
     kind = meta[3] if len(meta) > 3 else "deep"

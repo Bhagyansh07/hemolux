@@ -51,15 +51,19 @@ npx wrangler d1 execute hemolux-telemetry --remote --file scripts/init_db.sql
 The schema has no column that could hold an image, an identifier or free text;
 the two tables are `telemetry` and `feedback`.
 
-## 3. Stage the generated files into the site
+## 3. Vendor the runtime and stage the generated files
 
 ```powershell
-node scripts/build_site.mjs
+node scripts/vendor_runtime.mjs   # onnxruntime-web -> app/web/vendor/ort/ (git-ignored)
+node scripts/build_site.mjs       # model + reports -> app/web/ (git-ignored)
 ```
 
-This copies the exported model and the aggregate reports into `app/web/models/`
-and `app/web/data/`. Both destinations are git-ignored, so the deployed numbers
-always come from a real run rather than from a committed file.
+`vendor_runtime.mjs` copies the three files the wasm backend needs out of a
+pinned `onnxruntime-web`, so the page never pulls a script from a CDN and the
+CSP can stay same-origin. `build_site.mjs` copies the exported model and the
+aggregate reports into `app/web/models/` and `app/web/data/`. Both destinations
+are git-ignored, so the deployed numbers always come from a real run rather than
+from a committed file.
 
 ## 4. Deploy
 

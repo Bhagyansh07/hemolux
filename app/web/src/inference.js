@@ -127,18 +127,33 @@ export function decodeOutputs(outputs, meta = {}) {
  * self-hosted runtime (never a CDN), so the CSP can stay same-origin.
  * ------------------------------------------------------------------ */
 
+const RUNTIME_URL = "/vendor/ort/ort.wasm.min.js";
+const RUNTIME_BASE = "/vendor/ort/";
+
 let runtimePromise = null;
 
+function configureRuntime(ort) {
+  // Self-hosted, so the wasm and its worker are resolved from our own origin
+  // rather than a CDN. Threads are capped because more than a few rarely help a
+  // model this small and each one costs a worker.
+  ort.env.wasm.wasmPaths = RUNTIME_BASE;
+  const cores = typeof navigator === "undefined" ? 1 : navigator.hardwareConcurrency || 1;
+  ort.env.wasm.numThreads = Math.min(4, cores);
+  return ort;
+}
+
 function ensureRuntime() {
-  if (globalThis.ort && globalThis.ort.InferenceSession) return Promise.resolve(globalThis.ort);
+  if (globalThis.ort && globalThis.ort.InferenceSession) {
+    return Promise.resolve(configureRuntime(globalThis.ort));
+  }
   if (runtimePromise) return runtimePromise;
   runtimePromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = "/vendor/ort/ort.min.js";
+    script.src = RUNTIME_URL;
     script.async = true;
     script.onload = () =>
       globalThis.ort && globalThis.ort.InferenceSession
-        ? resolve(globalThis.ort)
+        ? resolve(configureRuntime(globalThis.ort))
         : reject(new Error("onnxruntime-web loaded but exposed no InferenceSession"));
     script.onerror = () => reject(new Error("onnxruntime-web failed to load"));
     document.head.append(script);

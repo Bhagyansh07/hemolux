@@ -21,10 +21,13 @@ make treatment decisions.** See [ETHICS.md](ETHICS.md).
 
 ## Status
 
-The measurement, evaluation and training library is complete and tested, and the
-ONNX graph the browser will run is exported and checked against PyTorch. The web
-front end and the telemetry Worker are not yet in this tree, so nothing is claimed
-about a screen anyone can look at.
+The measurement, evaluation and training library is complete and tested, and it
+exports an ONNX graph checked against PyTorch. The web front end runs that graph
+on-device through `onnxruntime-web`, so no photograph leaves the phone, and the
+two edge Workers that record a screening are in this tree too. The measured
+results are not published yet: the validation sweep runs over the real corpus
+before anything claims a number, which is why [EVALS.md](EVALS.md) is still a
+stub.
 
 | Component | State |
 | --- | --- |
@@ -48,10 +51,12 @@ about a screen anyone can look at.
 | Validation-only configuration sweep | implemented, 17 tests |
 | ONNX export, verified against PyTorch | implemented, 21 tests |
 | Command line, all six subcommands end to end | implemented, 35 tests |
-| Web front end and telemetry Worker | not yet in this tree |
+| Web front end, on-device inference, offline shell | implemented, 25 tests |
+| Telemetry and feedback Workers, D1 schema | implemented, 11 tests |
+| Deploy pipeline (Cloudflare Pages, no build step) | scripted; [docs/DEPLOY.md](docs/DEPLOY.md) |
 | Measured results | not yet published; [EVALS.md](EVALS.md) is a stub |
 
-828 tests, all passing, `ruff check .` clean.
+870 tests, all passing, `ruff check .` clean.
 
 ## The claims this project tests
 
@@ -128,10 +133,22 @@ src/hemolux/
   models/
     backbone.py          frozen-backbone builder, staged unfreezing, browser set
     heads.py             binary, severity, regression, ordinal, multitask
+app/web/                     the deployed site: no build step, plain ES modules
+  index.html, styles.css     shell, dark default, clinical-instrument tokens
+  colorimetry.js             the colour extractor, ported from Python
+  src/inference.js           the ONNX seam: crop, resize, tensor, decode
+  src/app.js                 camera, ROI guide, state machine
+  src/i18n.js                full EN and HI dictionaries
+  src/telemetry.js           best-effort, image-proof screening telemetry
+  sw.js                      offline shell; caches the runtime and the model
+functions/api/v1/            Cloudflare Pages Functions: telemetry, feedback
 scripts/
   quality_sweep.py          measures the corpus to justify QUALITY_ABSTAIN
   make_synthetic_fixture.py writes a corpus in the real layout, for CI
-tests/                      828 tests
+  build_site.mjs            stages the model and reports into the site
+  vendor_runtime.mjs        copies onnxruntime-web in, so no CDN is called
+docs/DEPLOY.md               the free deploy path, end to end
+tests/                      870 tests
 ```
 
 ## Dataset
@@ -172,13 +189,16 @@ wheels that this project never uses. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Development
 
 ```bash
-pytest                                  # 828 tests
+pytest                                  # 870 tests
 ruff check .                            # lint
 hemolux validate                        # what is actually in the corpus
 hemolux train                           # train every head, report, write checkpoints
 hemolux export --head ordinal           # the graph the browser runs
 hemolux report                          # reprint the last run's numbers
 python scripts/quality_sweep.py         # corpus quality distribution
+node scripts/vendor_runtime.mjs         # self-host onnxruntime-web
+node scripts/build_site.mjs             # stage the model + reports for deploy
+npx wrangler pages deploy app/web --project-name hemolux   # see docs/DEPLOY.md
 ```
 
 ## Licence

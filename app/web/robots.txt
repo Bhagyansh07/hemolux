@@ -1,0 +1,9 @@
+# Hemolux is a public screening-aid page. Everything is indexable; there is no
+# private area, no account and no query surface worth hiding.
+#
+# If the site is served from a custom domain, update the Sitemap line below and
+# the <loc> in sitemap.xml to that domain. See docs/DOMAIN_SETUP.md.
+User-agent: *
+Allow: /
+
+Sitemap: https://hemolux.pages.dev/sitemap.xml

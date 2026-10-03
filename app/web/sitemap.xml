@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One page, one URL. The four tabs are client-side panels under `/`, not routes,
+  so there is nothing else to list. Update the <loc> to the custom domain when
+  one is attached; see docs/DOMAIN_SETUP.md.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://hemolux.pages.dev/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

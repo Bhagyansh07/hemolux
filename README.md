@@ -44,11 +44,11 @@ about a screen anyone can look at.
 | Training loop and feature cache | implemented, 53 tests |
 | Validation-only configuration sweep | implemented, 17 tests |
 | ONNX export, verified against PyTorch | implemented, 21 tests |
-| Command line, all six subcommands end to end | implemented, 27 tests |
+| Command line, all six subcommands end to end | implemented, 32 tests |
 | Web front end and telemetry Worker | not yet in this tree |
 | Measured results | not yet published; [EVALS.md](EVALS.md) is a stub |
 
-770 tests, all passing, `ruff check .` clean.
+775 tests, all passing, `ruff check .` clean.
 
 ## The claims this project tests
 
@@ -125,7 +125,7 @@ src/hemolux/
 scripts/
   quality_sweep.py          measures the corpus to justify QUALITY_ABSTAIN
   make_synthetic_fixture.py writes a corpus in the real layout, for CI
-tests/                      770 tests
+tests/                      775 tests
 ```
 
 ## Dataset
@@ -166,7 +166,7 @@ wheels that this project never uses. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Development
 
 ```bash
-pytest                                  # 770 tests
+pytest                                  # 775 tests
 ruff check .                            # lint
 hemolux validate                        # what is actually in the corpus
 hemolux train                           # train every head, report, write checkpoints

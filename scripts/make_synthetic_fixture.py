@@ -51,7 +51,7 @@ Usage
 -----
     python scripts/make_synthetic_fixture.py --patients 60
     python scripts/make_synthetic_fixture.py --patients 60 --force
-    python scripts/validate_dataset.py --synthetic
+    hemolux validate --data-root data/synthetic
 """
 
 from __future__ import annotations
@@ -69,9 +69,14 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from hemolux.config import PATHS
+from hemolux.config import PATHS, SYNTHETIC_MARKER
 
-PREFIX = "SYNTHETIC_"
+#: Every artefact this script writes carries this prefix, so a synthetic result can
+#: never be mistaken for a real one. It comes from the package rather than being
+#: written here, because ``hemolux.validation`` reads it to decide that a corpus is
+#: synthetic and skip its literal 217-patient assertions. A generator-local copy
+#: would be one edit away from being a lie.
+PREFIX = SYNTHETIC_MARKER
 
 #: Frame size as ``(width, height)``. Portrait, and not 224, so the crop-then-resize
 #: path is exercised rather than short-circuited by a frame that is already the
@@ -353,7 +358,7 @@ def main() -> int:
     print(f"[fixture] labels : {', '.join(written)}, 1 withdrawn as ELIMINATO")
     print(f"[fixture] truth  : {truth_path.name} (generator parameters, not a model)")
     print("\n[fixture] Exercise it with:")
-    print("            python scripts/validate_dataset.py --synthetic")
+    print("            hemolux validate --data-root data/synthetic")
     return 0
 
 

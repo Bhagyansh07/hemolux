@@ -989,7 +989,7 @@ class ConjunctivaDataset:
 
     Implemented against ``torch.utils.data.Dataset``'s protocol without
     subclassing it, so that importing this module for its helpers (as
-    ``scripts/validate_dataset.py`` does) does not pull in torch.
+    ``hemolux.validation`` does) does not pull in torch.
 
     Each item is ``(tensor, hb, patient_id)``. The tensor is CHW float32 and
     matches :data:`PREPROCESS_SPEC` exactly, which is what keeps the browser

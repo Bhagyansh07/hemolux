@@ -66,7 +66,7 @@ __all__ = [
 #: Backbones small enough to ship to a browser. The ONNX graph is
 #: downloaded by the user on a phone connection, so its size is a product
 #: constraint, not only an engineering one. Actual exported sizes are printed by
-#: ``scripts/export_onnx.py`` and recorded in ``EVALS.md``; they are not
+#: ``hemolux export`` and recorded in ``EVALS.md``; they are not
 #: hard-coded here, because a hard-coded size is a number nobody re-checks.
 BROWSER_CANDIDATES: tuple[str, ...] = (
     "mobilenetv3_small_100",

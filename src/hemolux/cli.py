@@ -273,6 +273,7 @@ def _features_for(kind: str, roi: str, balance: str, args, records):
     features the single-run path would have rejected as a stale read.
     """
     from hemolux.data.dataset import build_records
+    from hemolux.fingerprint import StaleFeatureCacheError
     from hemolux.training import (
         extract_features,
         feature_cache_path,
@@ -284,6 +285,14 @@ def _features_for(kind: str, roi: str, balance: str, args, records):
         for path in sorted(ARTIFACT_MODELS.glob("features_*.npz")):
             try:
                 features = load_feature_cache(path)
+            except StaleFeatureCacheError as stale:
+                # The reason is printed rather than swallowed. Re-extracting is the
+                # right response, but doing it silently hides the one thing worth
+                # knowing: that the feature code changed since this cache was written,
+                # so no number derived from it is reproducible from a checkout of the
+                # commit that produced it.
+                print(f"  ignoring stale cache {path.name}: {stale}")
+                continue
             except Exception:
                 # A cache this build cannot read is not a cache, and a half-written
                 # .npz from an interrupted run is the ordinary case here. Skipping it

@@ -300,6 +300,24 @@ def test_the_results_file_says_which_corpus_produced_it(trained: SimpleNamespace
     assert block["generated_at"], "the run has no timestamp"
 
 
+def test_the_results_file_carries_the_cross_site_audit(trained: SimpleNamespace) -> None:
+    """The decision-axis half of the audit has to survive in the artefact.
+
+    The thresholded numbers are what a screening programme acts on, so they cannot
+    live only on screen. The confound string is asserted directly because a
+    consumer reading ``per_site`` out of the JSON has no other way to learn that
+    site is confounded with exposure in this corpus, and the ordinal head is the
+    one that emits a probability, so its calibration block must be available.
+    """
+    payload = json.loads((trained.reports / "results.json").read_text(encoding="utf-8"))
+    audit = payload["site_audit"]["ordinal"]
+
+    assert audit["available"] is True
+    assert "confounded with" in audit["confound"], "the exposure confound did not travel"
+    assert audit["screening"]["per_site"], "no per-site screening rows were written"
+    assert audit["calibration"]["available"] is True, "an ordinal head emits a probability"
+
+
 # --------------------------------------------------------------------------- #
 # Cache routing: each configuration reaches its own file, and nobody else's
 # --------------------------------------------------------------------------- #

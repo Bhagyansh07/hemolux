@@ -115,12 +115,14 @@ from hemolux.metrics.calibration import (
     soft_label,
     temperature_scale,
 )
+from hemolux.metrics.classification import who_cutoff
 from hemolux.metrics.colorimetry import (
     extract_colour_features,
     extract_colour_features_balanced,
 )
 from hemolux.metrics.fairness import evaluate_subgroups, subgroup_spread
 from hemolux.metrics.regression import RegressionReport, regression_report
+from hemolux.metrics.site_audit import audit_sites
 from hemolux.models.backbone import ModelSpec, build_model, resolve_device
 from hemolux.models.heads import build_head
 
@@ -1564,6 +1566,51 @@ def coverage_report(fit: HeadFit) -> dict[str, object]:
     }
 
 
+def _site_audit_block(fit: HeadFit, test: FeatureSet) -> dict[str, object]:
+    """Per-site screening thresholds, and calibration where a probability exists.
+
+    The thresholded block is always available -- it needs only the prediction and
+    the WHO cutoff. The calibration block needs a probability, which a bare
+    regression head does not emit, so it is reported as unavailable there rather
+    than faked from a number that is not one.
+
+    For an ordinal head the anaemia probability is read off the bin CDF at the
+    cutoff: ``P(Hb < cut) = sum_k p_k * [centre_k < cut]``. The bins are one gram
+    wide, so this discretises the CDF rather than integrating it; that is stated
+    because the ECE it feeds is only as sharp as the grid beneath it.
+    """
+    if fit.test_hb_true.size == 0 or fit.test_hb_pred.size == 0:
+        return {
+            "available": False,
+            "reason": (
+                "the test fold was not scored (score_test=False), so there is no "
+                "prediction to threshold or calibrate. This is a measurement that "
+                "was not taken."
+            ),
+        }
+
+    sex = list(test.sex)
+    site = np.array(test.site, dtype=object)
+    confidence = None
+    correct = None
+    if DECODE_HEAD.get(fit.head) == "ordinal" and fit.test_outputs.size:
+        cut = who_cutoff(sex)
+        probs = _softmax(fit.test_outputs)
+        centres = np.asarray(HB_BIN_CENTRES, dtype=np.float64)
+        confidence = (probs * (centres[None, :] < cut[:, None])).sum(axis=1)
+        correct = fit.test_hb_true < cut
+
+    audit = audit_sites(
+        fit.test_hb_true,
+        fit.test_hb_pred,
+        sex,
+        site,
+        confidence=confidence,
+        correct=correct,
+    )
+    return {"available": True, **audit.to_dict()}
+
+
 def build_report(
     fits: Sequence[HeadFit],
     features: FeatureSet,
@@ -1618,6 +1665,10 @@ def build_report(
         "single_split": rows,
         "site_holdout": list(site_rows),
         "coverage": {f.head: coverage_report(f) for f in fits},
+        # The cross-site decision block, per head, inside the artefact. It repeats
+        # the exposure confound from ``site_audit.SITE_CONFOUND`` so a reader of
+        # the JSON cannot lift a site contrast without it.
+        "site_audit": {f.head: _site_audit_block(f, features.select(fold.test)) for f in fits},
         "reference": REFERENCE_NOTE,
     }
     if extra:

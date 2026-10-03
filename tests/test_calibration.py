@@ -43,6 +43,8 @@ from hemolux.metrics.calibration import (
     _apply_temperature,
     abstention_threshold,
     brier_score,
+    calibration_by_group,
+    calibration_curve,
     expected_calibration_error,
     expected_hb,
     ordinal_target_index,
@@ -614,3 +616,81 @@ class TestAbstention:
     @pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
     def test_non_finite_sigma_always_abstains(self, bad: float) -> None:
         assert should_abstain(bad, 1.0)
+
+
+# --------------------------------------------------------------------------- #
+# Reliability curves
+# --------------------------------------------------------------------------- #
+
+
+class TestCalibrationCurve:
+    def test_a_calibrated_bin_lands_on_the_diagonal(self) -> None:
+        """Ten calls at confidence 0.7, seven correct: the bin sits at (0.7, 0.7)."""
+        curve = calibration_curve(np.full(10, 0.7), np.array([True] * 7 + [False] * 3))
+
+        assert curve.n == 10
+        assert curve.confidence == pytest.approx([0.7])
+        assert curve.accuracy == pytest.approx([0.7])
+        assert curve.count.tolist() == [10]
+        assert curve.ece == pytest.approx(0.0)
+
+    def test_the_gap_between_the_bin_and_the_diagonal_is_the_error(self) -> None:
+        """Confident and wrong: 0.9 confidence, zero accuracy, ECE 0.9."""
+        curve = calibration_curve(np.full(12, 0.9), np.zeros(12, dtype=bool))
+
+        assert curve.accuracy == pytest.approx([0.0])
+        assert curve.ece == pytest.approx(0.9)
+
+    def test_empty_bins_are_dropped_not_drawn_at_zero(self) -> None:
+        curve = calibration_curve(np.array([0.05, 0.95]), np.array([True, True]), n_bins=10)
+
+        assert len(curve.confidence) == 2
+        assert curve.count.tolist() == [1, 1]
+
+    def test_confidence_exactly_one_is_in_the_last_bin(self) -> None:
+        curve = calibration_curve(np.array([1.0, 1.0]), np.array([True, False]), n_bins=10)
+
+        assert len(curve.confidence) == 1
+        assert curve.confidence[0] == 1.0
+        assert curve.accuracy[0] == pytest.approx(0.5)
+
+    def test_the_curve_and_the_scalar_agree_on_the_partition(self) -> None:
+        """Same edges, same result. A curve and an ECE that disagree would be
+        two descriptions of the same data with no way to tell which was wrong."""
+        rng = np.random.default_rng(0)
+        conf = rng.uniform(0.0, 1.0, size=200)
+        hit = rng.uniform(0.0, 1.0, size=200) < conf
+
+        assert calibration_curve(conf, hit, n_bins=8).ece == pytest.approx(
+            expected_calibration_error(conf, hit, n_bins=8)
+        )
+
+    def test_an_empty_input_is_nan_not_an_exception(self) -> None:
+        curve = calibration_curve(np.array([]), np.array([], dtype=bool))
+
+        assert curve.n == 0
+        assert np.isnan(curve.ece)
+        assert curve.confidence.size == 0
+
+    def test_shapes_must_match(self) -> None:
+        with pytest.raises(ValueError):
+            calibration_curve(np.ones(4), np.ones(5, dtype=bool))
+
+    def test_zero_bins_is_rejected(self) -> None:
+        with pytest.raises(ValueError):
+            calibration_curve(np.ones(4), np.ones(4, dtype=bool), n_bins=0)
+
+    def test_grouping_adds_pooled_first_and_sorts_the_rest(self) -> None:
+        conf = np.array([0.9, 0.9, 0.1, 0.1])
+        hit = np.array([True, False, True, False])
+        group = np.array(["Italy", "India", "Italy", "India"], dtype=object)
+
+        curves = calibration_by_group(conf, hit, group, n_bins=10)
+
+        assert list(curves) == ["pooled", "India", "Italy"]
+        assert curves["pooled"].n == 4
+        assert curves["India"].n == 2
+
+    def test_group_shape_mismatch_is_rejected(self) -> None:
+        with pytest.raises(ValueError):
+            calibration_by_group(np.ones(4), np.ones(4, dtype=bool), np.array(["a", "b"]))

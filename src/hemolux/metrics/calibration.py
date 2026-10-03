@@ -162,6 +162,124 @@ def brier_score(confidence: _FloatArr, correct: NDArray[np.bool_] | _FloatArr) -
 
 
 # --------------------------------------------------------------------------- #
+# Reliability curves
+# --------------------------------------------------------------------------- #
+
+
+@dataclass(frozen=True)
+class CalibrationCurve:
+    """A reliability diagram, plus the ECE that summarises it.
+
+    ``confidence`` and ``accuracy`` hold one entry per *non-empty* bin: the mean
+    predicted confidence of the bin, and the observed frequency of a correct
+    call. Empty bins are dropped rather than carried as NaN, because a bin with
+    no members has no position on the x-axis and drawing it at zero would put a
+    point on the plot that was never measured.
+
+    The scalar ECE beside the curve is not a substitute for it. A model can hold
+    a small average error while being badly overconfident in the top bin, and the
+    top bin is where a screening decision is taken; the shape is the finding.
+    """
+
+    confidence: _FloatArr
+    accuracy: _FloatArr
+    count: NDArray[np.int64]
+    ece: float
+    n: int
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "n": self.n,
+            "ece": self.ece,
+            "bins": [
+                {"confidence": float(c), "accuracy": float(a), "count": int(k)}
+                for c, a, k in zip(self.confidence, self.accuracy, self.count, strict=True)
+            ],
+        }
+
+
+def calibration_curve(
+    confidence: _FloatArr,
+    correct: NDArray[np.bool_] | _FloatArr,
+    *,
+    n_bins: int = 10,
+) -> CalibrationCurve:
+    """Bin predictions by confidence and measure the accuracy in each bin.
+
+    A perfectly calibrated model lies on ``accuracy == confidence``. The same bin
+    edges and the same ``np.digitize`` convention as
+    :func:`expected_calibration_error` are used deliberately, so the curve and the
+    scalar cannot describe two different partitionings of the same data -- which
+    is exactly the disagreement a reader would have no way to notice.
+    """
+    conf = np.asarray(confidence, dtype=np.float64).ravel()
+    hit = np.asarray(correct).ravel().astype(np.float64)
+    if conf.shape != hit.shape:
+        raise ValueError(f"shape mismatch: {conf.shape} vs {hit.shape}")
+    if n_bins < 1:
+        raise ValueError(f"n_bins must be at least 1, got {n_bins!r}")
+    if conf.size == 0:
+        empty = np.asarray([], dtype=np.float64)
+        return CalibrationCurve(
+            confidence=empty,
+            accuracy=empty,
+            count=np.asarray([], dtype=np.int64),
+            ece=float("nan"),
+            n=0,
+        )
+
+    edges = np.linspace(0.0, 1.0, n_bins + 1)
+    # A confidence of exactly 1.0 belongs to the last bin; np.digitize would drop it.
+    idx = np.clip(np.digitize(conf, edges[1:-1], right=False), 0, n_bins - 1)
+
+    xs: list[float] = []
+    ys: list[float] = []
+    ks: list[int] = []
+    for b in range(n_bins):
+        mask = idx == b
+        if not mask.any():
+            continue
+        xs.append(float(conf[mask].mean()))
+        ys.append(float(hit[mask].mean()))
+        ks.append(int(mask.sum()))
+    return CalibrationCurve(
+        confidence=np.asarray(xs, dtype=np.float64),
+        accuracy=np.asarray(ys, dtype=np.float64),
+        count=np.asarray(ks, dtype=np.int64),
+        ece=expected_calibration_error(conf, hit, n_bins),
+        n=int(conf.size),
+    )
+
+
+def calibration_by_group(
+    confidence: _FloatArr,
+    correct: NDArray[np.bool_] | _FloatArr,
+    group: NDArray[np.generic],
+    *,
+    n_bins: int = 10,
+) -> dict[str, CalibrationCurve]:
+    """One curve per group value, plus the pooled curve under ``"pooled"``.
+
+    Grouped rather than pooled-only because calibration is the fairness axis that
+    a single number hides best: a model can be unbiased in the mean across two
+    sites and still be confident-but-wrong in one of them.
+    """
+    conf = np.asarray(confidence, dtype=np.float64).ravel()
+    hit = np.asarray(correct).ravel().astype(np.float64)
+    g = np.asarray(group).ravel()
+    if not (conf.shape == hit.shape == g.shape):
+        raise ValueError(
+            f"confidence {conf.shape}, correct {hit.shape} and group {g.shape} "
+            f"must be the same length"
+        )
+    out: dict[str, CalibrationCurve] = {"pooled": calibration_curve(conf, hit, n_bins=n_bins)}
+    for value in sorted({str(v) for v in g}, key=str):
+        mask = g.astype(str) == value
+        out[value] = calibration_curve(conf[mask], hit[mask], n_bins=n_bins)
+    return out
+
+
+# --------------------------------------------------------------------------- #
 # Temperature scaling
 # --------------------------------------------------------------------------- #
 

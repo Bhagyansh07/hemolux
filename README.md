@@ -32,7 +32,9 @@ about a screen anyone can look at.
 | Colourimetry, L\*a\*b\*, erythema index, ITA | implemented, 62 tests |
 | Regression metrics, Bland-Altman with bootstrap CI | implemented, 46 tests |
 | Fairness audit, subgroup error and bias-vs-ITA | implemented, 94 tests |
-| Calibration, ECE, temperature scaling, risk-coverage | implemented, 75 tests |
+| Calibration, ECE, reliability curves, temperature scaling, risk-coverage | implemented, 85 tests |
+| Screening thresholds at the WHO cutoffs, per site and severity | implemented, 16 tests |
+| Cross-site calibration audit with the exposure confound | implemented, 8 tests |
 | Patient-disjoint and site-holdout splitting | implemented, 64 tests |
 | Image quality gate | implemented, 41 tests |
 | Losses | implemented, 54 tests |
@@ -45,11 +47,11 @@ about a screen anyone can look at.
 | Training loop and feature cache | implemented, 53 tests |
 | Validation-only configuration sweep | implemented, 17 tests |
 | ONNX export, verified against PyTorch | implemented, 21 tests |
-| Command line, all six subcommands end to end | implemented, 34 tests |
+| Command line, all six subcommands end to end | implemented, 35 tests |
 | Web front end and telemetry Worker | not yet in this tree |
 | Measured results | not yet published; [EVALS.md](EVALS.md) is a stub |
 
-793 tests, all passing, `ruff check .` clean.
+828 tests, all passing, `ruff check .` clean.
 
 ## The claims this project tests
 
@@ -120,6 +122,8 @@ src/hemolux/
     colorimetry.py       CIELAB, redness ratios, erythema index, ITA, b* proxy
     regression.py        MAE, RMSE, R2, EVS, Bland-Altman with bootstrap CI
     fairness.py          subgroup error, bias-vs-ITA slope, verdicts
+    classification.py    sensitivity/specificity/PPV/NPV at the WHO cutoffs, per group
+    site_audit.py        per-site thresholds and calibration, with the exposure confound
     calibration.py       posterior mean, ECE, Brier, temperature, risk-coverage
   models/
     backbone.py          frozen-backbone builder, staged unfreezing, browser set
@@ -127,7 +131,7 @@ src/hemolux/
 scripts/
   quality_sweep.py          measures the corpus to justify QUALITY_ABSTAIN
   make_synthetic_fixture.py writes a corpus in the real layout, for CI
-tests/                      793 tests
+tests/                      828 tests
 ```
 
 ## Dataset
@@ -168,7 +172,7 @@ wheels that this project never uses. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Development
 
 ```bash
-pytest                                  # 793 tests
+pytest                                  # 828 tests
 ruff check .                            # lint
 hemolux validate                        # what is actually in the corpus
 hemolux train                           # train every head, report, write checkpoints

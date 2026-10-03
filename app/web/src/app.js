@@ -1,5 +1,6 @@
 import { applyI18n, getLang, setLang, t } from "./i18n.js";
 import { analyse } from "./inference.js";
+import { renderEvidence } from "./evidence.js";
 import { reportScreening } from "./telemetry.js";
 
 /* The guide ellipse, in fractions of the captured frame. Kept beside the SVG
@@ -55,6 +56,7 @@ function renderLang() {
   applyI18n(document);
   netText.textContent = navigator.onLine ? t("state.online") : t("state.offline");
   netPill.dataset.state = navigator.onLine ? "ok" : "offline";
+  renderEvidencePanel();
 }
 
 langToggle.addEventListener("click", () => {
@@ -64,6 +66,33 @@ langToggle.addEventListener("click", () => {
 
 window.addEventListener("online", renderLang);
 window.addEventListener("offline", renderLang);
+
+/* ------------------------------------------------------------------ *
+ * Evidence
+ * ------------------------------------------------------------------ */
+
+let evidenceReport = null;
+
+/* Re-render on language change. Before the report arrives this is a no-op and
+ * the panel keeps the pending notice it was served with. */
+function renderEvidencePanel() {
+  const container = document.getElementById("evidence-metrics");
+  if (!container || !evidenceReport) return;
+  renderEvidence(container, t, evidenceReport);
+}
+
+/* The report is staged by `scripts/build_site.mjs`, never committed, so a fresh
+ * checkout has none and the page stays honest about it. */
+async function loadEvidence() {
+  try {
+    const response = await fetch("/data/results.json", { cache: "no-cache" });
+    if (!response.ok) return;
+    evidenceReport = await response.json();
+    renderEvidencePanel();
+  } catch {
+    /* No report: the pending notice stands. */
+  }
+}
 
 /* ------------------------------------------------------------------ *
  * Phase rendering
@@ -276,6 +305,7 @@ btnAnalyse.addEventListener("click", runAnalysis);
 setTab("screen");
 renderLang();
 render();
+loadEvidence();
 
 /* The shell, the extractor, the runtime and the model are cached on first load
  * so a screening still works with no network. Registration failure is ignored:

@@ -1,0 +1,1397 @@
+{
+  "provenance": {
+    "data_root": "data\\raw\\eyes-defy-anemia\\dataset anemia",
+    "corpus": "documented",
+    "feature_fingerprint": "859399ade17b39e8",
+    "git_commit": "d7c5a436353805787fd994cd5df1ba5ec826d8d0",
+    "git_dirty": true,
+    "generated_at": "2026-10-04T19:49:48+00:00"
+  },
+  "config": {
+    "backbone": "mobilenetv3_small_100",
+    "roi": "palpebral",
+    "size": 224,
+    "epochs": 40,
+    "batch_size": 16,
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "unfreeze_param_fraction": 0.0,
+    "dropout": 0.0,
+    "huber_delta": 1.0,
+    "soft_sigma": 0.6,
+    "seed": 42,
+    "device": "auto",
+    "num_workers": 0,
+    "val_fraction": 0.2
+  },
+  "corpus": {
+    "n_patients": 217,
+    "roi": "palpebral",
+    "backbone": "mobilenetv3_small_100",
+    "feature_dim": 1024,
+    "excluded_features": [],
+    "per_site": {
+      "India": {
+        "n": 95,
+        "hb_mean": 11.472,
+        "age_mean": 33.67
+      },
+      "Italy": {
+        "n": 122,
+        "hb_mean": 13.829,
+        "age_mean": 49.25
+      }
+    }
+  },
+  "fold": {
+    "name": "single-seed42",
+    "n_train": 131,
+    "n_val": 43,
+    "n_test": 43
+  },
+  "single_split": [
+    {
+      "head": "binary",
+      "n_test": 43.0,
+      "mae": 2.1416,
+      "rmse": 2.4928,
+      "r2": 0.0478,
+      "pearson_r": 0.2758,
+      "bias": 0.3339,
+      "loa_lower": -4.5652,
+      "loa_upper": 5.2331,
+      "within_1": 0.2093,
+      "within_2": 0.4419,
+      "site_mae_gap": 0.0411,
+      "site_bias_gap": 1.5753,
+      "worst_site": "India",
+      "worst_site_n": 22.0,
+      "best_epoch": 29.0,
+      "val_loss": 0.6746,
+      "seconds": 0.32,
+      "note:0": "checkpoint written to binary_mobilenetv3_small_100_palpebral_single-seed42.pt"
+    },
+    {
+      "head": "severity",
+      "n_test": 43.0,
+      "mae": 2.4578,
+      "rmse": 2.8037,
+      "r2": -0.2046,
+      "pearson_r": -0.3417,
+      "bias": -1.0757,
+      "loa_lower": -6.2106,
+      "loa_upper": 4.0591,
+      "within_1": 0.1395,
+      "within_2": 0.4186,
+      "site_mae_gap": 0.7799,
+      "site_bias_gap": 1.3998,
+      "worst_site": "Italy",
+      "worst_site_n": 21.0,
+      "best_epoch": 9.0,
+      "val_loss": 1.0647,
+      "seconds": 0.22,
+      "note:0": "checkpoint written to severity_mobilenetv3_small_100_palpebral_single-seed42.pt"
+    },
+    {
+      "head": "regression",
+      "n_test": 43.0,
+      "mae": 2.1387,
+      "rmse": 2.6073,
+      "r2": -0.0417,
+      "pearson_r": 0.3022,
+      "bias": 0.9283,
+      "loa_lower": -3.9036,
+      "loa_upper": 5.7602,
+      "within_1": 0.2791,
+      "within_2": 0.5349,
+      "site_mae_gap": 0.5466,
+      "site_bias_gap": 1.672,
+      "worst_site": "India",
+      "worst_site_n": 22.0,
+      "best_epoch": 25.0,
+      "val_loss": 1.5263,
+      "seconds": 0.22,
+      "note:0": "checkpoint written to regression_mobilenetv3_small_100_palpebral_single-seed42.pt"
+    },
+    {
+      "head": "ordinal",
+      "n_test": 43.0,
+      "mae": 2.156,
+      "rmse": 2.5376,
+      "r2": 0.0132,
+      "pearson_r": 0.3033,
+      "bias": 0.6201,
+      "loa_lower": -4.2599,
+      "loa_upper": 5.5001,
+      "within_1": 0.2791,
+      "within_2": 0.3721,
+      "site_mae_gap": 0.2249,
+      "site_bias_gap": 1.5808,
+      "worst_site": "India",
+      "worst_site_n": 22.0,
+      "best_epoch": 5.0,
+      "val_loss": 2.1757,
+      "seconds": 0.31,
+      "note:0": "checkpoint written to ordinal_mobilenetv3_small_100_palpebral_single-seed42.pt",
+      "note:1": "temperature 1.136 fitted on 0.0652 -> 0.0726 ECE (validation only)"
+    },
+    {
+      "head": "multitask",
+      "n_test": 43.0,
+      "mae": 2.1581,
+      "rmse": 2.5436,
+      "r2": 0.0086,
+      "pearson_r": 0.2998,
+      "bias": 0.6537,
+      "loa_lower": -4.2213,
+      "loa_upper": 5.5286,
+      "within_1": 0.2791,
+      "within_2": 0.4419,
+      "site_mae_gap": 0.2544,
+      "site_bias_gap": 1.5902,
+      "worst_site": "India",
+      "worst_site_n": 22.0,
+      "best_epoch": 14.0,
+      "val_loss": 2.9551,
+      "seconds": 0.78,
+      "note:0": "checkpoint written to multitask_mobilenetv3_small_100_palpebral_single-seed42.pt"
+    }
+  ],
+  "site_holdout": [
+    {
+      "head": "regression",
+      "fold": "India->Italy",
+      "train_site": "India",
+      "test_site": "Italy",
+      "n_train": 95,
+      "n_test": 122,
+      "mae": 4.357,
+      "rmse": 4.909,
+      "r2": -4.8355,
+      "pearson_r": 0.6766,
+      "bias": -4.2852,
+      "loa_lower": -8.9985,
+      "loa_upper": 0.428,
+      "within_1": 0.0164,
+      "within_2": 0.0902,
+      "mean_true_hb_test_site": 13.829,
+      "mean_true_hb_train_site": 11.472,
+      "sex_mae_gap": 0.2782,
+      "selection": "fixed epoch budget, no validation patients available",
+      "seconds": 0.15
+    },
+    {
+      "head": "ordinal",
+      "fold": "India->Italy",
+      "train_site": "India",
+      "test_site": "Italy",
+      "n_train": 95,
+      "n_test": 122,
+      "mae": 2.9125,
+      "rmse": 3.2089,
+      "r2": -1.4935,
+      "pearson_r": -0.4421,
+      "bias": -2.4156,
+      "loa_lower": -6.5728,
+      "loa_upper": 1.7416,
+      "within_1": 0.1066,
+      "within_2": 0.2787,
+      "mean_true_hb_test_site": 13.829,
+      "mean_true_hb_train_site": 11.472,
+      "sex_mae_gap": 0.8585,
+      "selection": "fixed epoch budget, no validation patients available",
+      "seconds": 0.2
+    },
+    {
+      "head": "regression",
+      "fold": "Italy->India",
+      "train_site": "Italy",
+      "test_site": "India",
+      "n_train": 122,
+      "n_test": 95,
+      "mae": 3.3001,
+      "rmse": 3.7837,
+      "r2": -2.3582,
+      "pearson_r": NaN,
+      "bias": 3.1707,
+      "loa_lower": -0.8976,
+      "loa_upper": 7.239,
+      "within_1": 0.1579,
+      "within_2": 0.2737,
+      "mean_true_hb_test_site": 11.472,
+      "mean_true_hb_train_site": 13.829,
+      "sex_mae_gap": 1.2547,
+      "selection": "fixed epoch budget, no validation patients available",
+      "seconds": 0.19
+    },
+    {
+      "head": "ordinal",
+      "fold": "Italy->India",
+      "train_site": "Italy",
+      "test_site": "India",
+      "n_train": 122,
+      "n_test": 95,
+      "mae": 3.151,
+      "rmse": 3.6413,
+      "r2": -2.1102,
+      "pearson_r": NaN,
+      "bias": 2.9993,
+      "loa_lower": -1.069,
+      "loa_upper": 7.0676,
+      "within_1": 0.1579,
+      "within_2": 0.3158,
+      "mean_true_hb_test_site": 11.472,
+      "mean_true_hb_train_site": 13.829,
+      "sex_mae_gap": 1.2332,
+      "selection": "fixed epoch budget, no validation patients available",
+      "seconds": 0.29
+    }
+  ],
+  "coverage": {
+    "binary": {
+      "available": false,
+      "reason": "a distribution over bins exists only for the ordinal arm, not 'binary'; a bare regression has no uncertainty to rank by"
+    },
+    "severity": {
+      "available": false,
+      "reason": "a distribution over bins exists only for the ordinal arm, not 'severity'; a bare regression has no uncertainty to rank by"
+    },
+    "regression": {
+      "available": false,
+      "reason": "a distribution over bins exists only for the ordinal arm, not 'regression'; a bare regression has no uncertainty to rank by"
+    },
+    "ordinal": {
+      "available": true,
+      "uncertainty": "predictive SD of the ordinal bin distribution",
+      "mae_at_full_coverage": 2.156,
+      "mae_at_25pct_coverage": 2.2641,
+      "curve": [
+        [
+          1.0,
+          2.156
+        ],
+        [
+          0.954,
+          2.1241
+        ],
+        [
+          0.907,
+          2.1352
+        ],
+        [
+          0.861,
+          2.1393
+        ],
+        [
+          0.814,
+          2.1959
+        ],
+        [
+          0.767,
+          2.1587
+        ],
+        [
+          0.721,
+          2.2071
+        ],
+        [
+          0.674,
+          2.2622
+        ],
+        [
+          0.628,
+          2.3032
+        ],
+        [
+          0.581,
+          2.3281
+        ],
+        [
+          0.535,
+          2.4132
+        ],
+        [
+          0.488,
+          2.5573
+        ],
+        [
+          0.442,
+          2.48
+        ],
+        [
+          0.395,
+          2.3316
+        ],
+        [
+          0.326,
+          2.3974
+        ],
+        [
+          0.279,
+          2.6067
+        ],
+        [
+          0.233,
+          2.6898
+        ],
+        [
+          0.186,
+          2.8372
+        ],
+        [
+          0.14,
+          2.5024
+        ],
+        [
+          0.093,
+          2.2641
+        ]
+      ],
+      "n": 43
+    },
+    "multitask": {
+      "available": true,
+      "uncertainty": "predictive SD of the ordinal bin distribution",
+      "mae_at_full_coverage": 2.1581,
+      "mae_at_25pct_coverage": 2.1403,
+      "curve": [
+        [
+          1.0,
+          2.1581
+        ],
+        [
+          0.954,
+          2.1285
+        ],
+        [
+          0.907,
+          2.142
+        ],
+        [
+          0.861,
+          2.1488
+        ],
+        [
+          0.814,
+          2.2059
+        ],
+        [
+          0.767,
+          2.1719
+        ],
+        [
+          0.721,
+          2.2239
+        ],
+        [
+          0.674,
+          2.2831
+        ],
+        [
+          0.628,
+          2.3288
+        ],
+        [
+          0.581,
+          2.3524
+        ],
+        [
+          0.535,
+          2.4396
+        ],
+        [
+          0.488,
+          2.5862
+        ],
+        [
+          0.442,
+          2.5075
+        ],
+        [
+          0.395,
+          2.3573
+        ],
+        [
+          0.326,
+          2.4194
+        ],
+        [
+          0.279,
+          2.6252
+        ],
+        [
+          0.233,
+          2.7034
+        ],
+        [
+          0.186,
+          2.8543
+        ],
+        [
+          0.14,
+          2.511
+        ],
+        [
+          0.093,
+          2.1403
+        ]
+      ],
+      "n": 43
+    }
+  },
+  "site_audit": {
+    "binary": {
+      "available": true,
+      "confound": "Site is not a biological category in this corpus. It is confounded with lighting: the Italian frames are exposed brighter than the Indian ones (mean BGR 102/85/106 against 84/66/77), and the direction of the cross-site bias matches the direction of that exposure difference. Every site contrast below is therefore a contrast between two lighting setups as much as between two populations. A gap that survives this confound is evidence; one that does not is not evidence about pigmentation.",
+      "screening": {
+        "bands": [
+          "anaemia",
+          "moderate_or_worse",
+          "severe"
+        ],
+        "pooled": {
+          "anaemia": {
+            "band": "anaemia",
+            "threshold": null,
+            "n": 43,
+            "positives": 23,
+            "tp": 11,
+            "tn": 4,
+            "fp": 16,
+            "fn": 12,
+            "sensitivity": 0.4782608695652174,
+            "specificity": 0.2,
+            "ppv": 0.4074074074074074,
+            "npv": 0.25,
+            "verdict": "ok"
+          },
+          "moderate_or_worse": {
+            "band": "moderate_or_worse",
+            "threshold": 9.0,
+            "n": 43,
+            "positives": 4,
+            "tp": 0,
+            "tn": 39,
+            "fp": 0,
+            "fn": 4,
+            "sensitivity": 0.0,
+            "specificity": 1.0,
+            "ppv": NaN,
+            "npv": 0.9069767441860465,
+            "verdict": "ok"
+          },
+          "severe": {
+            "band": "severe",
+            "threshold": 7.0,
+            "n": 43,
+            "positives": 0,
+            "tp": 0,
+            "tn": 43,
+            "fp": 0,
+            "fn": 0,
+            "sensitivity": NaN,
+            "specificity": 1.0,
+            "ppv": NaN,
+            "npv": 1.0,
+            "verdict": "not_computable"
+          }
+        },
+        "per_site": {
+          "India": {
+            "anaemia": {
+              "band": "anaemia",
+              "threshold": null,
+              "n": 22,
+              "positives": 18,
+              "tp": 6,
+              "tn": 1,
+              "fp": 3,
+              "fn": 12,
+              "sensitivity": 0.3333333333333333,
+              "specificity": 0.25,
+              "ppv": 0.6666666666666666,
+              "npv": 0.07692307692307693,
+              "verdict": "ok"
+            },
+            "moderate_or_worse": {
+              "band": "moderate_or_worse",
+              "threshold": 9.0,
+              "n": 22,
+              "positives": 3,
+              "tp": 0,
+              "tn": 19,
+              "fp": 0,
+              "fn": 3,
+              "sensitivity": 0.0,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 0.8636363636363636,
+              "verdict": "ok"
+            },
+            "severe": {
+              "band": "severe",
+              "threshold": 7.0,
+              "n": 22,
+              "positives": 0,
+              "tp": 0,
+              "tn": 22,
+              "fp": 0,
+              "fn": 0,
+              "sensitivity": NaN,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 1.0,
+              "verdict": "not_computable"
+            }
+          },
+          "Italy": {
+            "anaemia": {
+              "band": "anaemia",
+              "threshold": null,
+              "n": 21,
+              "positives": 5,
+              "tp": 5,
+              "tn": 3,
+              "fp": 13,
+              "fn": 0,
+              "sensitivity": 1.0,
+              "specificity": 0.1875,
+              "ppv": 0.2777777777777778,
+              "npv": 1.0,
+              "verdict": "ok"
+            },
+            "moderate_or_worse": {
+              "band": "moderate_or_worse",
+              "threshold": 9.0,
+              "n": 21,
+              "positives": 1,
+              "tp": 0,
+              "tn": 20,
+              "fp": 0,
+              "fn": 1,
+              "sensitivity": 0.0,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 0.9523809523809523,
+              "verdict": "ok"
+            },
+            "severe": {
+              "band": "severe",
+              "threshold": 7.0,
+              "n": 21,
+              "positives": 0,
+              "tp": 0,
+              "tn": 21,
+              "fp": 0,
+              "fn": 0,
+              "sensitivity": NaN,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 1.0,
+              "verdict": "not_computable"
+            }
+          }
+        }
+      },
+      "calibration": {
+        "available": false,
+        "reason": "a bare regression head emits no probability to be calibrated, so there is no confidence to bin. This is a measurement that was not taken, not a model that failed a check."
+      }
+    },
+    "severity": {
+      "available": true,
+      "confound": "Site is not a biological category in this corpus. It is confounded with lighting: the Italian frames are exposed brighter than the Indian ones (mean BGR 102/85/106 against 84/66/77), and the direction of the cross-site bias matches the direction of that exposure difference. Every site contrast below is therefore a contrast between two lighting setups as much as between two populations. A gap that survives this confound is evidence; one that does not is not evidence about pigmentation.",
+      "screening": {
+        "bands": [
+          "anaemia",
+          "moderate_or_worse",
+          "severe"
+        ],
+        "pooled": {
+          "anaemia": {
+            "band": "anaemia",
+            "threshold": null,
+            "n": 43,
+            "positives": 23,
+            "tp": 23,
+            "tn": 0,
+            "fp": 20,
+            "fn": 0,
+            "sensitivity": 1.0,
+            "specificity": 0.0,
+            "ppv": 0.5348837209302325,
+            "npv": NaN,
+            "verdict": "ok"
+          },
+          "moderate_or_worse": {
+            "band": "moderate_or_worse",
+            "threshold": 9.0,
+            "n": 43,
+            "positives": 4,
+            "tp": 0,
+            "tn": 39,
+            "fp": 0,
+            "fn": 4,
+            "sensitivity": 0.0,
+            "specificity": 1.0,
+            "ppv": NaN,
+            "npv": 0.9069767441860465,
+            "verdict": "ok"
+          },
+          "severe": {
+            "band": "severe",
+            "threshold": 7.0,
+            "n": 43,
+            "positives": 0,
+            "tp": 0,
+            "tn": 43,
+            "fp": 0,
+            "fn": 0,
+            "sensitivity": NaN,
+            "specificity": 1.0,
+            "ppv": NaN,
+            "npv": 1.0,
+            "verdict": "not_computable"
+          }
+        },
+        "per_site": {
+          "India": {
+            "anaemia": {
+              "band": "anaemia",
+              "threshold": null,
+              "n": 22,
+              "positives": 18,
+              "tp": 18,
+              "tn": 0,
+              "fp": 4,
+              "fn": 0,
+              "sensitivity": 1.0,
+              "specificity": 0.0,
+              "ppv": 0.8181818181818182,
+              "npv": NaN,
+              "verdict": "ok"
+            },
+            "moderate_or_worse": {
+              "band": "moderate_or_worse",
+              "threshold": 9.0,
+              "n": 22,
+              "positives": 3,
+              "tp": 0,
+              "tn": 19,
+              "fp": 0,
+              "fn": 3,
+              "sensitivity": 0.0,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 0.8636363636363636,
+              "verdict": "ok"
+            },
+            "severe": {
+              "band": "severe",
+              "threshold": 7.0,
+              "n": 22,
+              "positives": 0,
+              "tp": 0,
+              "tn": 22,
+              "fp": 0,
+              "fn": 0,
+              "sensitivity": NaN,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 1.0,
+              "verdict": "not_computable"
+            }
+          },
+          "Italy": {
+            "anaemia": {
+              "band": "anaemia",
+              "threshold": null,
+              "n": 21,
+              "positives": 5,
+              "tp": 5,
+              "tn": 0,
+              "fp": 16,
+              "fn": 0,
+              "sensitivity": 1.0,
+              "specificity": 0.0,
+              "ppv": 0.23809523809523808,
+              "npv": NaN,
+              "verdict": "ok"
+            },
+            "moderate_or_worse": {
+              "band": "moderate_or_worse",
+              "threshold": 9.0,
+              "n": 21,
+              "positives": 1,
+              "tp": 0,
+              "tn": 20,
+              "fp": 0,
+              "fn": 1,
+              "sensitivity": 0.0,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 0.9523809523809523,
+              "verdict": "ok"
+            },
+            "severe": {
+              "band": "severe",
+              "threshold": 7.0,
+              "n": 21,
+              "positives": 0,
+              "tp": 0,
+              "tn": 21,
+              "fp": 0,
+              "fn": 0,
+              "sensitivity": NaN,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 1.0,
+              "verdict": "not_computable"
+            }
+          }
+        }
+      },
+      "calibration": {
+        "available": false,
+        "reason": "a bare regression head emits no probability to be calibrated, so there is no confidence to bin. This is a measurement that was not taken, not a model that failed a check."
+      }
+    },
+    "regression": {
+      "available": true,
+      "confound": "Site is not a biological category in this corpus. It is confounded with lighting: the Italian frames are exposed brighter than the Indian ones (mean BGR 102/85/106 against 84/66/77), and the direction of the cross-site bias matches the direction of that exposure difference. Every site contrast below is therefore a contrast between two lighting setups as much as between two populations. A gap that survives this confound is evidence; one that does not is not evidence about pigmentation.",
+      "screening": {
+        "bands": [
+          "anaemia",
+          "moderate_or_worse",
+          "severe"
+        ],
+        "pooled": {
+          "anaemia": {
+            "band": "anaemia",
+            "threshold": null,
+            "n": 43,
+            "positives": 23,
+            "tp": 5,
+            "tn": 20,
+            "fp": 0,
+            "fn": 18,
+            "sensitivity": 0.21739130434782608,
+            "specificity": 1.0,
+            "ppv": 1.0,
+            "npv": 0.5263157894736842,
+            "verdict": "ok"
+          },
+          "moderate_or_worse": {
+            "band": "moderate_or_worse",
+            "threshold": 9.0,
+            "n": 43,
+            "positives": 4,
+            "tp": 0,
+            "tn": 39,
+            "fp": 0,
+            "fn": 4,
+            "sensitivity": 0.0,
+            "specificity": 1.0,
+            "ppv": NaN,
+            "npv": 0.9069767441860465,
+            "verdict": "ok"
+          },
+          "severe": {
+            "band": "severe",
+            "threshold": 7.0,
+            "n": 43,
+            "positives": 0,
+            "tp": 0,
+            "tn": 43,
+            "fp": 0,
+            "fn": 0,
+            "sensitivity": NaN,
+            "specificity": 1.0,
+            "ppv": NaN,
+            "npv": 1.0,
+            "verdict": "not_computable"
+          }
+        },
+        "per_site": {
+          "India": {
+            "anaemia": {
+              "band": "anaemia",
+              "threshold": null,
+              "n": 22,
+              "positives": 18,
+              "tp": 0,
+              "tn": 4,
+              "fp": 0,
+              "fn": 18,
+              "sensitivity": 0.0,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 0.18181818181818182,
+              "verdict": "ok"
+            },
+            "moderate_or_worse": {
+              "band": "moderate_or_worse",
+              "threshold": 9.0,
+              "n": 22,
+              "positives": 3,
+              "tp": 0,
+              "tn": 19,
+              "fp": 0,
+              "fn": 3,
+              "sensitivity": 0.0,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 0.8636363636363636,
+              "verdict": "ok"
+            },
+            "severe": {
+              "band": "severe",
+              "threshold": 7.0,
+              "n": 22,
+              "positives": 0,
+              "tp": 0,
+              "tn": 22,
+              "fp": 0,
+              "fn": 0,
+              "sensitivity": NaN,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 1.0,
+              "verdict": "not_computable"
+            }
+          },
+          "Italy": {
+            "anaemia": {
+              "band": "anaemia",
+              "threshold": null,
+              "n": 21,
+              "positives": 5,
+              "tp": 5,
+              "tn": 16,
+              "fp": 0,
+              "fn": 0,
+              "sensitivity": 1.0,
+              "specificity": 1.0,
+              "ppv": 1.0,
+              "npv": 1.0,
+              "verdict": "ok"
+            },
+            "moderate_or_worse": {
+              "band": "moderate_or_worse",
+              "threshold": 9.0,
+              "n": 21,
+              "positives": 1,
+              "tp": 0,
+              "tn": 20,
+              "fp": 0,
+              "fn": 1,
+              "sensitivity": 0.0,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 0.9523809523809523,
+              "verdict": "ok"
+            },
+            "severe": {
+              "band": "severe",
+              "threshold": 7.0,
+              "n": 21,
+              "positives": 0,
+              "tp": 0,
+              "tn": 21,
+              "fp": 0,
+              "fn": 0,
+              "sensitivity": NaN,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 1.0,
+              "verdict": "not_computable"
+            }
+          }
+        }
+      },
+      "calibration": {
+        "available": false,
+        "reason": "a bare regression head emits no probability to be calibrated, so there is no confidence to bin. This is a measurement that was not taken, not a model that failed a check."
+      }
+    },
+    "ordinal": {
+      "available": true,
+      "confound": "Site is not a biological category in this corpus. It is confounded with lighting: the Italian frames are exposed brighter than the Indian ones (mean BGR 102/85/106 against 84/66/77), and the direction of the cross-site bias matches the direction of that exposure difference. Every site contrast below is therefore a contrast between two lighting setups as much as between two populations. A gap that survives this confound is evidence; one that does not is not evidence about pigmentation.",
+      "screening": {
+        "bands": [
+          "anaemia",
+          "moderate_or_worse",
+          "severe"
+        ],
+        "pooled": {
+          "anaemia": {
+            "band": "anaemia",
+            "threshold": null,
+            "n": 43,
+            "positives": 23,
+            "tp": 5,
+            "tn": 20,
+            "fp": 0,
+            "fn": 18,
+            "sensitivity": 0.21739130434782608,
+            "specificity": 1.0,
+            "ppv": 1.0,
+            "npv": 0.5263157894736842,
+            "verdict": "ok"
+          },
+          "moderate_or_worse": {
+            "band": "moderate_or_worse",
+            "threshold": 9.0,
+            "n": 43,
+            "positives": 4,
+            "tp": 0,
+            "tn": 39,
+            "fp": 0,
+            "fn": 4,
+            "sensitivity": 0.0,
+            "specificity": 1.0,
+            "ppv": NaN,
+            "npv": 0.9069767441860465,
+            "verdict": "ok"
+          },
+          "severe": {
+            "band": "severe",
+            "threshold": 7.0,
+            "n": 43,
+            "positives": 0,
+            "tp": 0,
+            "tn": 43,
+            "fp": 0,
+            "fn": 0,
+            "sensitivity": NaN,
+            "specificity": 1.0,
+            "ppv": NaN,
+            "npv": 1.0,
+            "verdict": "not_computable"
+          }
+        },
+        "per_site": {
+          "India": {
+            "anaemia": {
+              "band": "anaemia",
+              "threshold": null,
+              "n": 22,
+              "positives": 18,
+              "tp": 0,
+              "tn": 4,
+              "fp": 0,
+              "fn": 18,
+              "sensitivity": 0.0,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 0.18181818181818182,
+              "verdict": "ok"
+            },
+            "moderate_or_worse": {
+              "band": "moderate_or_worse",
+              "threshold": 9.0,
+              "n": 22,
+              "positives": 3,
+              "tp": 0,
+              "tn": 19,
+              "fp": 0,
+              "fn": 3,
+              "sensitivity": 0.0,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 0.8636363636363636,
+              "verdict": "ok"
+            },
+            "severe": {
+              "band": "severe",
+              "threshold": 7.0,
+              "n": 22,
+              "positives": 0,
+              "tp": 0,
+              "tn": 22,
+              "fp": 0,
+              "fn": 0,
+              "sensitivity": NaN,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 1.0,
+              "verdict": "not_computable"
+            }
+          },
+          "Italy": {
+            "anaemia": {
+              "band": "anaemia",
+              "threshold": null,
+              "n": 21,
+              "positives": 5,
+              "tp": 5,
+              "tn": 16,
+              "fp": 0,
+              "fn": 0,
+              "sensitivity": 1.0,
+              "specificity": 1.0,
+              "ppv": 1.0,
+              "npv": 1.0,
+              "verdict": "ok"
+            },
+            "moderate_or_worse": {
+              "band": "moderate_or_worse",
+              "threshold": 9.0,
+              "n": 21,
+              "positives": 1,
+              "tp": 0,
+              "tn": 20,
+              "fp": 0,
+              "fn": 1,
+              "sensitivity": 0.0,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 0.9523809523809523,
+              "verdict": "ok"
+            },
+            "severe": {
+              "band": "severe",
+              "threshold": 7.0,
+              "n": 21,
+              "positives": 0,
+              "tp": 0,
+              "tn": 21,
+              "fp": 0,
+              "fn": 0,
+              "sensitivity": NaN,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 1.0,
+              "verdict": "not_computable"
+            }
+          }
+        }
+      },
+      "calibration": {
+        "available": true,
+        "n_bins": 10,
+        "pooled": {
+          "n": 43,
+          "ece": 0.25154463643384534,
+          "bins": [
+            {
+              "confidence": 0.2931914814063491,
+              "accuracy": 0.75,
+              "count": 16
+            },
+            {
+              "confidence": 0.4136233223879974,
+              "accuracy": 0.30434782608695654,
+              "count": 23
+            },
+            {
+              "confidence": 0.6742651844654365,
+              "accuracy": 1.0,
+              "count": 1
+            },
+            {
+              "confidence": 0.7603733933487301,
+              "accuracy": 1.0,
+              "count": 2
+            },
+            {
+              "confidence": 0.8108413746041072,
+              "accuracy": 1.0,
+              "count": 1
+            }
+          ]
+        },
+        "per_site": {
+          "India": {
+            "n": 22,
+            "ece": 0.4767010642024785,
+            "bins": [
+              {
+                "confidence": 0.29319148140634915,
+                "accuracy": 0.9230769230769231,
+                "count": 13
+              },
+              {
+                "confidence": 0.4112319254736594,
+                "accuracy": 0.6666666666666666,
+                "count": 9
+              }
+            ]
+          },
+          "Italy": {
+            "n": 21,
+            "ece": 0.31837953257681195,
+            "bins": [
+              {
+                "confidence": 0.2931914814063491,
+                "accuracy": 0.0,
+                "count": 3
+              },
+              {
+                "confidence": 0.4151606489757862,
+                "accuracy": 0.07142857142857142,
+                "count": 14
+              },
+              {
+                "confidence": 0.6742651844654365,
+                "accuracy": 1.0,
+                "count": 1
+              },
+              {
+                "confidence": 0.7603733933487301,
+                "accuracy": 1.0,
+                "count": 2
+              },
+              {
+                "confidence": 0.8108413746041072,
+                "accuracy": 1.0,
+                "count": 1
+              }
+            ]
+          }
+        },
+        "max_ece_gap": 0.15832153162566653
+      }
+    },
+    "multitask": {
+      "available": true,
+      "confound": "Site is not a biological category in this corpus. It is confounded with lighting: the Italian frames are exposed brighter than the Indian ones (mean BGR 102/85/106 against 84/66/77), and the direction of the cross-site bias matches the direction of that exposure difference. Every site contrast below is therefore a contrast between two lighting setups as much as between two populations. A gap that survives this confound is evidence; one that does not is not evidence about pigmentation.",
+      "screening": {
+        "bands": [
+          "anaemia",
+          "moderate_or_worse",
+          "severe"
+        ],
+        "pooled": {
+          "anaemia": {
+            "band": "anaemia",
+            "threshold": null,
+            "n": 43,
+            "positives": 23,
+            "tp": 5,
+            "tn": 20,
+            "fp": 0,
+            "fn": 18,
+            "sensitivity": 0.21739130434782608,
+            "specificity": 1.0,
+            "ppv": 1.0,
+            "npv": 0.5263157894736842,
+            "verdict": "ok"
+          },
+          "moderate_or_worse": {
+            "band": "moderate_or_worse",
+            "threshold": 9.0,
+            "n": 43,
+            "positives": 4,
+            "tp": 0,
+            "tn": 39,
+            "fp": 0,
+            "fn": 4,
+            "sensitivity": 0.0,
+            "specificity": 1.0,
+            "ppv": NaN,
+            "npv": 0.9069767441860465,
+            "verdict": "ok"
+          },
+          "severe": {
+            "band": "severe",
+            "threshold": 7.0,
+            "n": 43,
+            "positives": 0,
+            "tp": 0,
+            "tn": 43,
+            "fp": 0,
+            "fn": 0,
+            "sensitivity": NaN,
+            "specificity": 1.0,
+            "ppv": NaN,
+            "npv": 1.0,
+            "verdict": "not_computable"
+          }
+        },
+        "per_site": {
+          "India": {
+            "anaemia": {
+              "band": "anaemia",
+              "threshold": null,
+              "n": 22,
+              "positives": 18,
+              "tp": 0,
+              "tn": 4,
+              "fp": 0,
+              "fn": 18,
+              "sensitivity": 0.0,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 0.18181818181818182,
+              "verdict": "ok"
+            },
+            "moderate_or_worse": {
+              "band": "moderate_or_worse",
+              "threshold": 9.0,
+              "n": 22,
+              "positives": 3,
+              "tp": 0,
+              "tn": 19,
+              "fp": 0,
+              "fn": 3,
+              "sensitivity": 0.0,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 0.8636363636363636,
+              "verdict": "ok"
+            },
+            "severe": {
+              "band": "severe",
+              "threshold": 7.0,
+              "n": 22,
+              "positives": 0,
+              "tp": 0,
+              "tn": 22,
+              "fp": 0,
+              "fn": 0,
+              "sensitivity": NaN,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 1.0,
+              "verdict": "not_computable"
+            }
+          },
+          "Italy": {
+            "anaemia": {
+              "band": "anaemia",
+              "threshold": null,
+              "n": 21,
+              "positives": 5,
+              "tp": 5,
+              "tn": 16,
+              "fp": 0,
+              "fn": 0,
+              "sensitivity": 1.0,
+              "specificity": 1.0,
+              "ppv": 1.0,
+              "npv": 1.0,
+              "verdict": "ok"
+            },
+            "moderate_or_worse": {
+              "band": "moderate_or_worse",
+              "threshold": 9.0,
+              "n": 21,
+              "positives": 1,
+              "tp": 0,
+              "tn": 20,
+              "fp": 0,
+              "fn": 1,
+              "sensitivity": 0.0,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 0.9523809523809523,
+              "verdict": "ok"
+            },
+            "severe": {
+              "band": "severe",
+              "threshold": 7.0,
+              "n": 21,
+              "positives": 0,
+              "tp": 0,
+              "tn": 21,
+              "fp": 0,
+              "fn": 0,
+              "sensitivity": NaN,
+              "specificity": 1.0,
+              "ppv": NaN,
+              "npv": 1.0,
+              "verdict": "not_computable"
+            }
+          }
+        }
+      },
+      "calibration": {
+        "available": true,
+        "n_bins": 10,
+        "pooled": {
+          "n": 43,
+          "ece": 0.25197019970373535,
+          "bins": [
+            {
+              "confidence": 0.3148735675139404,
+              "accuracy": 0.75,
+              "count": 16
+            },
+            {
+              "confidence": 0.4330947347591132,
+              "accuracy": 0.30434782608695654,
+              "count": 23
+            },
+            {
+              "confidence": 0.6594190959088999,
+              "accuracy": 1.0,
+              "count": 1
+            },
+            {
+              "confidence": 0.781369007954033,
+              "accuracy": 1.0,
+              "count": 2
+            },
+            {
+              "confidence": 0.8663261201589697,
+              "accuracy": 1.0,
+              "count": 1
+            }
+          ]
+        },
+        "per_site": {
+          "India": {
+            "n": 22,
+            "ece": 0.45572234485255914,
+            "bins": [
+              {
+                "confidence": 0.31487356751394036,
+                "accuracy": 0.9230769230769231,
+                "count": 13
+              },
+              {
+                "confidence": 0.4311946706180529,
+                "accuracy": 0.6666666666666666,
+                "count": 9
+              }
+            ]
+          },
+          "Italy": {
+            "n": 21,
+            "ece": 0.3303125873553815,
+            "bins": [
+              {
+                "confidence": 0.3148735675139404,
+                "accuracy": 0.0,
+                "count": 3
+              },
+              {
+                "confidence": 0.43431620456408054,
+                "accuracy": 0.07142857142857142,
+                "count": 14
+              },
+              {
+                "confidence": 0.6594190959088999,
+                "accuracy": 1.0,
+                "count": 1
+              },
+              {
+                "confidence": 0.781369007954033,
+                "accuracy": 1.0,
+                "count": 2
+              },
+              {
+                "confidence": 0.8663261201589697,
+                "accuracy": 1.0,
+                "count": 1
+              }
+            ]
+          }
+        },
+        "max_ece_gap": 0.12540975749717764
+      }
+    }
+  },
+  "reference": "Erythema index 2016 R2=0.27 (forniceal only 0.09); smartphone HHR 2021 R2=0.372; MobileNetV3+SE 2022 R2=0.512 / MAE 1.521; Mask R-CNN 2023 R2=0.503 vs 0.306 unsegmented; Hemo-ConViT 2025 MAE 0.870, R2 0.761. Clinical acceptability target: +/-1.0 g/dL."
+}

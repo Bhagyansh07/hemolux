@@ -249,3 +249,88 @@ def test_prediction_figures_are_written_from_the_gitignored_csv(tmp_path: Path) 
     written = figures.figure_predictions(predictions, tmp_path)
     assert {p.name for p in written} == {"predicted_vs_true.png", "bland_altman.png"}
     assert all(p.exists() and p.stat().st_size > 0 for p in written)
+
+
+# --------------------------------------------------------------------------- #
+# The sweep block
+# --------------------------------------------------------------------------- #
+
+
+def _sweep() -> dict[str, Any]:
+    """A two-candidate sweep: one winner and one that collapsed on validation."""
+    return {
+        "provenance": {
+            "git_commit": "deadbeef",
+            "feature_fingerprint": "0000000000000000",
+            "generated_at": "2026-01-01T00:00:00Z",
+        },
+        "metric": "mae",
+        "fold": {"name": "sweep-seed42", "n_train": 131, "n_val": 43, "n_test": 43},
+        "candidates": [
+            {
+                "label": "colour / forniceal / raw",
+                "kind": "colour",
+                "roi": "forniceal",
+                "balance": "raw",
+                "head": "regression",
+                "feature_dim": 12.0,
+                "val_mae": 1.99,
+                "val_r2": -0.1999,
+                "n_unmasked": 6.0,
+                "selected": True,
+            },
+            {
+                "label": "colour / forniceal / balanced",
+                "kind": "colour",
+                "roi": "forniceal",
+                "balance": "balanced",
+                "head": "regression",
+                "feature_dim": 12.0,
+                "val_mae": 5.704,
+                "val_r2": -8.511,
+                "n_unmasked": 6.0,
+                "selected": False,
+            },
+        ],
+        "winner": "colour / forniceal / raw",
+        "selection_gap": 3.714,
+        "test_read": "once, after selection",
+        "excluded_features": ["erythema_index"],
+        "test": {
+            "n": 43.0,
+            "mae": 1.9261,
+            "rmse": 2.6039,
+            "r2": -0.039,
+            "evs": -0.0134,
+            "pearson_r": 0.5089,
+            "bias": 0.4088,
+            "loa_lower": -4.6912,
+            "loa_upper": 5.5087,
+            "within_1": 0.3488,
+            "within_2": 0.6512,
+        },
+    }
+
+
+def test_sweep_block_keeps_the_losing_candidate_on_the_record() -> None:
+    """A sweep that names only its winner is a claim; the table is the selection."""
+    block = figures.sweep_block(_sweep())
+    assert "colour / forniceal / raw" in block
+    assert "colour / forniceal / balanced" in block
+    assert "5.704" in block
+    assert "| yes |" in block
+    assert "| no |" in block
+
+
+def test_sweep_block_prints_the_single_test_read() -> None:
+    block = figures.sweep_block(_sweep())
+    test_section = block.split("scored once after selection")[1]
+    assert "1.926" in test_section
+    assert "34.9%" in test_section
+    assert "once, after selection" in block
+
+
+def test_sweep_block_survives_an_empty_payload() -> None:
+    block = figures.sweep_block({})
+    assert "### Configuration sweep" in block
+    assert "-" in block

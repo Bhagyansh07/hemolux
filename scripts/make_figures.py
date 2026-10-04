@@ -269,6 +269,108 @@ def markdown_block(payload: dict[str, Any]) -> str:
     return "\n".join(parts) + "\n"
 
 
+def sweep_block(payload: dict[str, Any]) -> str:
+    """The configuration-selection section, read from ``sweep.json``.
+
+    This is separate from :func:`markdown_block` because the two artefacts answer
+    different questions. ``results.json`` is how the trained model did; ``sweep.json``
+    is *how the configuration was chosen*, and a winner named without the validation
+    numbers it beat is a claim, not a selection. The candidate table is the whole
+    point: it is where a loser such as a collapsed balanced-colour feature set stays
+    on the record instead of being deleted from the story.
+    """
+    provenance = payload.get("provenance") or {}
+    fold = payload.get("fold") or {}
+    candidates = payload.get("candidates") or []
+    parts: list[str] = []
+
+    parts.append("### Configuration sweep\n")
+    parts.append(
+        _table(
+            ["Field", "Value"],
+            [
+                ["Commit", f"`{provenance.get('git_commit') or '-'}`"],
+                ["Feature fingerprint", f"`{provenance.get('feature_fingerprint') or '-'}`"],
+                ["Generated", str(provenance.get("generated_at") or "-")],
+                ["Metric", str(payload.get("metric") or "-")],
+                [
+                    "Selection fold",
+                    f"{fold.get('n_train', '-')} train / {fold.get('n_val', '-')} val "
+                    f"({fold.get('name', '-')})",
+                ],
+                ["Test read", str(payload.get("test_read") or "-")],
+                ["Winner", str(payload.get("winner") or "-")],
+                ["Selection gap", _fmt(payload.get("selection_gap"))],
+                [
+                    "Excluded features",
+                    ", ".join(payload.get("excluded_features") or []) or "none",
+                ],
+            ],
+        )
+    )
+
+    if candidates:
+        rows: list[list[str]] = []
+        for candidate in candidates:
+            unmasked = _num(candidate.get("n_unmasked"))
+            rows.append(
+                [
+                    str(candidate.get("label", "-")),
+                    str(candidate.get("kind", "-")),
+                    str(candidate.get("roi", "-")),
+                    str(candidate.get("balance", "-")),
+                    str(candidate.get("head", "-")),
+                    _fmt(candidate.get("feature_dim"), 0),
+                    str(int(unmasked)) if np.isfinite(unmasked) else "-",
+                    _fmt(candidate.get("val_mae")),
+                    _signed(candidate.get("val_r2")),
+                    "yes" if candidate.get("selected") else "no",
+                ]
+            )
+        parts.append("\nCandidates, ranked on validation only:\n")
+        parts.append(
+            _table(
+                [
+                    "Candidate",
+                    "Kind",
+                    "ROI",
+                    "Balance",
+                    "Head",
+                    "Dim",
+                    "Whole-frame",
+                    "Val MAE",
+                    "Val R2",
+                    "Selected",
+                ],
+                rows,
+            )
+        )
+
+    test = payload.get("test") or {}
+    if test:
+        parts.append("\nWinner on the test fold, scored once after selection:\n")
+        parts.append(
+            _table(
+                ["n", "MAE", "RMSE", "R2", "EVS", "Pearson r", "Bias", "LoA", "+-1", "+-2"],
+                [
+                    [
+                        str(test.get("n", "-")),
+                        _fmt(test.get("mae")),
+                        _fmt(test.get("rmse")),
+                        _signed(test.get("r2")),
+                        _signed(test.get("evs")),
+                        _signed(test.get("pearson_r")),
+                        _signed(test.get("bias")),
+                        f"[{_signed(test.get('loa_lower'), 2)}, {_signed(test.get('loa_upper'), 2)}]",
+                        _pct(test.get("within_1")),
+                        _pct(test.get("within_2")),
+                    ]
+                ],
+            )
+        )
+    return "\n".join(parts) + "\n"
+
+
 def figure_reliability(payload: dict[str, Any], outdir: Path) -> Path | None:
     """Reliability curves, pooled against each site, for every calibratable head."""
     audit = payload.get("site_audit") or {}
@@ -454,6 +556,7 @@ def figure_predictions(predictions: dict[str, dict[str, np.ndarray]], outdir: Pa
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results", type=Path, default=ARTIFACT_REPORTS / "results.json")
+    parser.add_argument("--sweep", type=Path, default=ARTIFACT_REPORTS / "sweep.json")
     parser.add_argument("--predictions", type=Path, default=ARTIFACT_REPORTS / "predictions.csv")
     parser.add_argument("--out", type=Path, default=ARTIFACT_FIGURES)
     args = parser.parse_args()
@@ -466,6 +569,8 @@ def main() -> int:
 
     payload = json.loads(args.results.read_text(encoding="utf-8"))
     block = markdown_block(payload)
+    if args.sweep.exists():
+        block += "\n" + sweep_block(json.loads(args.sweep.read_text(encoding="utf-8")))
     block_path = ARTIFACT_REPORTS / "evals_block.md"
     block_path.write_text(block, encoding="utf-8")
     print(block)

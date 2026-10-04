@@ -1,0 +1,16 @@
+label,kind,roi,balance,head,feature_dim,val_mae,val_r2,best_epoch,seconds,n_unmasked,selected
+deep / forniceal_palpebral,deep,forniceal_palpebral,balanced,regression,1024.0,1.9837,-0.0421,24.0,0.249,6.0,False
+deep / forniceal,deep,forniceal,balanced,regression,1024.0,1.9837,-0.0421,24.0,0.2325,6.0,True
+deep / palpebral,deep,palpebral,balanced,regression,1024.0,1.9853,-0.0479,25.0,0.2316,0.0,False
+colour / forniceal / raw,colour,forniceal,raw,regression,12.0,1.99,-0.1999,40.0,0.2038,6.0,False
+colour / palpebral / raw,colour,palpebral,raw,regression,12.0,2.1255,-0.3453,36.0,0.1805,0.0,False
+colour / forniceal_palpebral / raw,colour,forniceal_palpebral,raw,regression,12.0,2.1284,-0.2526,40.0,0.182,6.0,False
+colour / palpebral / balanced,colour,palpebral,balanced,regression,12.0,3.6216,-3.3904,40.0,0.206,0.0,False
+colour / forniceal_palpebral / balanced,colour,forniceal_palpebral,balanced,regression,12.0,4.7665,-6.5186,40.0,0.2113,6.0,False
+colour / forniceal / balanced,colour,forniceal,balanced,regression,12.0,5.704,-8.511,40.0,0.2086,6.0,False
+hybrid / palpebral / balanced,hybrid,palpebral,balanced,regression,1036.0,12.9202,-30.7297,1.0,0.237,0.0,False
+hybrid / palpebral / raw,hybrid,palpebral,raw,regression,1036.0,12.9293,-30.7721,1.0,0.2281,0.0,False
+hybrid / forniceal_palpebral / balanced,hybrid,forniceal_palpebral,balanced,regression,1036.0,13.0061,-31.1742,1.0,0.2371,6.0,False
+hybrid / forniceal_palpebral / raw,hybrid,forniceal_palpebral,raw,regression,1036.0,13.0111,-31.1861,1.0,0.2336,6.0,False
+hybrid / forniceal / balanced,hybrid,forniceal,balanced,regression,1036.0,13.0118,-31.2059,1.0,0.2455,6.0,False
+hybrid / forniceal / raw,hybrid,forniceal,raw,regression,1036.0,13.0175,-31.224,1.0,0.2315,6.0,False

@@ -16,4 +16,4 @@ compatibility_date = "2025-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "hemolux-telemetry"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "6327d366-2649-4477-955f-846d2ea2af8b"

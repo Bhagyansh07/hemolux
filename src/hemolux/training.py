@@ -307,8 +307,17 @@ class FeatureSet:
         """
         if self.kind == "deep":
             return self
-        drop = {COLOUR_COLUMNS.index(name) for name in UNDEFINED_FEATURES if name in COLOUR_COLUMNS}
-        if not drop or self.features.shape[1] <= max(drop):
+        drop_colour = {COLOUR_COLUMNS.index(name) for name in UNDEFINED_FEATURES if name in COLOUR_COLUMNS}
+        if not drop_colour:
+            return self
+        if self.kind == "colour":
+            drop = drop_colour
+        else:  # hybrid: deep features followed by colour features
+            deep_dim = self.feature_dim - len(COLOUR_COLUMNS)
+            if deep_dim < 0:
+                deep_dim = 0
+            drop = {deep_dim + c for c in drop_colour}
+        if not drop or self.features.shape[1] <= max(drop, default=-1):
             return self
         keep = [i for i in range(self.features.shape[1]) if i not in drop]
         return replace(self, features=self.features[:, keep], feature_dim=len(keep))

@@ -1,0 +1,141 @@
+[14:53:16] waiting for the deep/palpebral feature cache
+[14:53:42] waiting for the deep/palpebral feature cache
+[15:13:33] ready: features_mobilenetv3_small_100_palpebral_deep_1024d.npz
+[15:13:33] $ train --data-root C:\Users\bhagy\Desktop\PROJECTS\Project 1\data\raw\eyes-defy-anemia\dataset anemia
+[15:13:49]   rc=0
+[15:13:49]   --- stdout ---
+[15:13:49]   using cached features: features_mobilenetv3_small_100_palpebral_deep_1024d.npz
+[15:13:49]   
+[15:13:49]     building the patient-disjoint split
+[15:13:49]     single-seed42: 131 train / 43 val / 43 test  (unfreezing 0% of backbone parameters)
+[15:13:49]   
+[15:13:49]     training 5 head(s): binary, severity, regression, ordinal, multitask
+[15:13:49]   
+[15:13:49]     head: binary
+[15:13:49]       binary     epoch   1/40  train 0.6867  val 0.6761   *
+[15:13:49]       binary     epoch   5/40  train 0.6571  val 0.6765
+[15:13:49]       binary     epoch  10/40  train 0.6347  val 0.6893
+[15:13:49]       binary     epoch  15/40  train 0.6147  val 0.6826
+[15:13:49]       binary     epoch  20/40  train 0.6175  val 0.6807
+[15:13:49]       binary     epoch  25/40  train 0.6272  val 0.6855
+[15:13:49]       binary     epoch  30/40  train 0.5937  val 0.6839
+[15:13:49]       binary     epoch  35/40  train 0.5932  val 0.6790
+[15:13:49]       binary     epoch  40/40  train 0.6066  val 0.6896
+[15:13:49]   
+[15:13:49]     head: severity
+[15:13:49]       severity   epoch   1/40  train 1.2850  val 1.1045   *
+[15:13:49]       severity   epoch   5/40  train 1.0125  val 1.0694   *
+[15:13:49]       severity   epoch  10/40  train 0.9710  val 1.1302
+[15:13:49]       severity   epoch  15/40  train 0.9165  val 1.1363
+[15:13:49]       severity   epoch  20/40  train 0.9184  val 1.1021
+[15:13:49]       severity   epoch  25/40  train 0.9399  val 1.1068
+[15:13:49]       severity   epoch  30/40  train 0.9287  val 1.0705
+[15:13:49]       severity   epoch  35/40  train 0.9320  val 1.1261
+[15:13:49]       severity   epoch  40/40  train 0.9697  val 1.0916
+[15:13:49]   
+[15:13:49]     head: regression
+[15:13:49]       regression epoch   1/40  train 11.7819  val 10.2825   *
+[15:13:49]       regression epoch   5/40  train 3.1792  val 2.1318   *
+[15:13:49]       regression epoch  10/40  train 1.3977  val 1.5495   *
+[15:13:49]       regression epoch  15/40  train 1.3397  val 1.5484   *
+[15:13:49]       regression epoch  20/40  train 1.2956  val 1.5494
+[15:13:49]       regression epoch  25/40  train 1.2700  val 1.5263   *
+[15:13:49]       regression epoch  30/40  train 1.2451  val 1.5397
+[15:13:49]       regression epoch  35/40  train 1.2386  val 1.5326
+[15:13:49]       regression epoch  40/40  train 1.2175  val 1.5535
+[15:13:49]   
+[15:13:49]     head: ordinal
+[15:13:49]       ordinal    epoch   1/40  train 2.2864  val 2.2264   *
+[15:13:49]       ordinal    epoch   5/40  train 2.0679  val 2.1757   *
+[15:13:49]       ordinal    epoch  10/40  train 2.0193  val 2.2766
+[15:13:49]       ordinal    epoch  15/40  train 2.0116  val 2.2462
+[15:13:49]       ordinal    epoch  20/40  train 1.9879  val 2.2163
+[15:13:49]       ordinal    epoch  25/40  train 1.9828  val 2.2612
+[15:13:49]       ordinal    epoch  30/40  train 1.9822  val 2.1972
+[15:13:49]       ordinal    epoch  35/40  train 1.9659  val 2.2412
+[15:13:49]       ordinal    epoch  40/40  train 1.9775  val 2.2328
+[15:13:49]   
+[15:13:49]     head: multitask
+[15:13:49]       multitask  epoch   1/40  train 7.4076  val 5.2259   *
+[15:13:49]       multitask  epoch   5/40  train 3.1174  val 2.9602
+[15:13:49]       multitask  epoch  10/40  train 2.8921  val 3.1075
+[15:13:49]       multitask  epoch  15/40  train 2.9399  val 3.0370
+[15:13:49]       multitask  epoch  20/40  train 2.8692  val 2.9870
+[15:13:49]       multitask  epoch  25/40  train 2.7601  val 3.0282
+[15:13:49]       multitask  epoch  30/40  train 2.7011  val 2.9885
+[15:13:49]       multitask  epoch  35/40  train 2.6742  val 3.0233
+[15:13:49]       multitask  epoch  40/40  train 2.7577  val 3.0005
+[15:13:49]   
+[15:13:49]   Experiment C1 -- head comparison, held-out 43 patients
+[15:13:49]   ======================================================
+[15:13:49]   head          n     MAE    RMSE      R2      r    bias    LoA-    LoA+     Â±1     Â±2    dMAE
+[15:13:49]   --------------------------------------------------------------------------------------------
+[15:13:49]   binary       43   2.142   2.493   0.048  0.276   0.334  -4.565   5.233   0.21   0.44   0.041
+[15:13:49]   severity     43   2.458   2.804  -0.205 -0.342  -1.076  -6.211   4.059   0.14   0.42   0.780
+[15:13:49]   regression   43   2.139   2.607  -0.042  0.302   0.928  -3.904   5.760   0.28   0.53   0.547
+[15:13:49]   ordinal      43   2.156   2.538   0.013  0.303   0.620  -4.260   5.500   0.28   0.37   0.225
+[15:13:49]   multitask    43   2.158   2.544   0.009  0.300   0.654  -4.221   5.529   0.28   0.44   0.254
+[15:13:49]   
+[15:13:49]     cross-site validation (train on one site, test on the other)
+[15:13:49]   
+[15:13:49]     head: regression  fold: India->Italy
+[15:13:49]       regression India->Italy     epoch  10/40  train 1.3578
+[15:13:49]       regression India->Italy     epoch  20/40  train 1.2495
+[15:13:49]       regression India->Italy     epoch  30/40  train 1.2497
+[15:13:49]       regression India->Italy     epoch  40/40  train 1.2525
+[15:13:49]   
+[15:13:49]     head: ordinal  fold: India->Italy
+[15:13:49]       ordinal    India->Italy     epoch  10/40  train 2.1602
+[15:13:49]       ordinal    India->Italy     epoch  20/40  train 2.1623
+[15:13:49]       ordinal    India->Italy     epoch  30/40  train 2.1573
+[15:13:49]       ordinal    India->Italy     epoch  40/40  train 2.1685
+[15:13:49]   
+[15:13:49]     head: regression  fold: Italy->India
+[15:13:49]       regression Italy->India     epoch  10/40  train 0.8543
+[15:13:49]       regression Italy->India     epoch  20/40  train 0.6717
+[15:13:49]       regression Italy->India     epoch  30/40  train 0.5964
+[15:13:49]       regression Italy->India     epoch  40/40  train 0.5556
+[15:13:49]   
+[15:13:49]     head: ordinal  fold: Italy->India
+[15:13:49]       ordinal    Italy->India     epoch  10/40  train 1.5614
+[15:13:49]       ordinal    Italy->India     epoch  20/40  train 1.4714
+[15:13:49]       ordinal    Italy->India     epoch  30/40  train 1.4388
+[15:13:49]       ordinal    Italy->India     epoch  40/40  train 1.4542
+[15:13:49]   
+[15:13:49]   head       fold                 n     MAE    RMSE      R2    bias     Â±1     Â±2  test Hb
+[15:13:49]   ----------------------------------------------------------------------------------------
+[15:13:49]   regression India->Italy       122   4.357   4.909  -4.835  -4.285   0.02   0.09    13.83
+[15:13:49]   ordinal    India->Italy       122   2.913   3.209  -1.494  -2.416   0.11   0.28    13.83
+[15:13:49]   regression Italy->India        95   3.300   3.784  -2.358   3.171   0.16   0.27    11.47
+[15:13:49]   ordinal    Italy->India        95   3.151   3.641  -2.110   2.999   0.16   0.32    11.47
+[15:13:49]   
+[15:13:49]     building the results file
+[15:13:49]     wrote C:\Users\bhagy\Desktop\PROJECTS\Project 1\artifacts\reports\results.json
+[15:13:49]     wrote C:\Users\bhagy\Desktop\PROJECTS\Project 1\artifacts\reports\results.csv
+[15:13:49]     wrote C:\Users\bhagy\Desktop\PROJECTS\Project 1\artifacts\reports\predictions.csv
+[15:13:49]   
+[15:13:49]     best head by test R2: binary (R2 0.048, MAE 2.142 g/dL)
+[15:13:49]     Erythema index 2016 R2=0.27 (forniceal only 0.09); smartphone HHR 2021 R2=0.372; MobileNetV3+SE 2022 R2=0.512 / MAE 1.521; Mask R-CNN 2023 R2=0.503 vs 0.306 unsegmented; Hemo-ConViT 2025 MAE 0.870, R2 0.761. Clinical acceptability target: +/-1.0 g/dL.
+[15:13:49] $ export --head ordinal
+[15:14:01]   rc=0
+[15:14:01]   --- stdout ---
+[15:14:01]   checkpoint: ordinal_mobilenetv3_small_100_palpebral_single-seed42.pt
+[15:14:01]       backbone mobilenetv3_small_100  head ordinal  roi palpebral  fold single-seed42  feature_dim 1024
+[15:14:01]   [backbone] mobilenetv3_small_100 reports num_features=576 but emits 1024; using the measured value.
+[15:14:01]   [backbone] mobilenetv3_small_100 + ordinal: unfroze 0/6 stages = 0/1,517,856 backbone params (0.0%, requested 0.0%)
+[15:14:01]   
+[15:14:01]     wrote C:\Users\bhagy\Desktop\PROJECTS\Project 1\artifacts\models\hemolux_screen_224.onnx
+[15:14:01]       5.83 MB
+[15:14:01]   
+[15:14:01]     ONNX vs PyTorch on identical input:
+[15:14:01]       hb    max |diff|: 9.537e-07 g/dL
+[15:14:01]       sigma max |diff|: 2.146e-06 g/dL
+[15:14:01]       verified
+[15:14:01]   
+[15:14:01]     wrote C:\Users\bhagy\Desktop\PROJECTS\Project 1\artifacts\models\hemolux_screen_224.json
+[15:14:01]       model_id mobilenetv3_small_100-ordinal-palpebral
+[15:14:01]       validated: residual sigma 2.490 g/dL
+[15:14:01]   --- stderr ---
+[15:14:01]   C:\Users\bhagy\Desktop\PROJECTS\Project 1\src\hemolux\export.py:64: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+[15:14:01]     if x.shape[-1] != self.size or x.shape[-2] != self.size:
+[15:14:01] accelerated train/export finished

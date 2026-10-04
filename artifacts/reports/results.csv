@@ -1,0 +1,6 @@
+head,n_test,mae,rmse,r2,pearson_r,bias,loa_lower,loa_upper,within_1,within_2,site_mae_gap,site_bias_gap,worst_site,worst_site_n,best_epoch,val_loss,seconds,note:0,note:1
+binary,43.0,2.1416,2.4928,0.0478,0.2758,0.3339,-4.5652,5.2331,0.2093,0.4419,0.0411,1.5753,India,22.0,29.0,0.6746,0.32,checkpoint written to binary_mobilenetv3_small_100_palpebral_single-seed42.pt,
+severity,43.0,2.4578,2.8037,-0.2046,-0.3417,-1.0757,-6.2106,4.0591,0.1395,0.4186,0.7799,1.3998,Italy,21.0,9.0,1.0647,0.22,checkpoint written to severity_mobilenetv3_small_100_palpebral_single-seed42.pt,
+regression,43.0,2.1387,2.6073,-0.0417,0.3022,0.9283,-3.9036,5.7602,0.2791,0.5349,0.5466,1.672,India,22.0,25.0,1.5263,0.22,checkpoint written to regression_mobilenetv3_small_100_palpebral_single-seed42.pt,
+ordinal,43.0,2.156,2.5376,0.0132,0.3033,0.6201,-4.2599,5.5001,0.2791,0.3721,0.2249,1.5808,India,22.0,5.0,2.1757,0.31,checkpoint written to ordinal_mobilenetv3_small_100_palpebral_single-seed42.pt,temperature 1.136 fitted on 0.0652 -> 0.0726 ECE (validation only)
+multitask,43.0,2.1581,2.5436,0.0086,0.2998,0.6537,-4.2213,5.5286,0.2791,0.4419,0.2544,1.5902,India,22.0,14.0,2.9551,0.78,checkpoint written to multitask_mobilenetv3_small_100_palpebral_single-seed42.pt,

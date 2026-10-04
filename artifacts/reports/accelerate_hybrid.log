@@ -1,0 +1,8 @@
+[14:53:21] waiting for the sweep's own features_mobilenetv3_small_100_forniceal_hybrid-balanced_1037d.npz
+[15:40:02] verification on features_mobilenetv3_small_100_forniceal_hybrid-balanced_1037d.npz: ok=True max_abs_diff=0.000e+00
+[15:40:22] wrote features_mobilenetv3_small_100_forniceal_hybrid-raw_1037d.npz dim=1037 reload_exact=True
+[15:40:42] wrote features_mobilenetv3_small_100_forniceal_palpebral_hybrid-balanced_1037d.npz dim=1037 reload_exact=True
+[15:41:02] wrote features_mobilenetv3_small_100_forniceal_palpebral_hybrid-raw_1037d.npz dim=1037 reload_exact=True
+[15:41:23] wrote features_mobilenetv3_small_100_palpebral_hybrid-balanced_1037d.npz dim=1037 reload_exact=True
+[15:41:43] wrote features_mobilenetv3_small_100_palpebral_hybrid-raw_1037d.npz dim=1037 reload_exact=True
+[15:41:43] hybrid acceleration finished

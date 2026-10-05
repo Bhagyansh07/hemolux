@@ -848,13 +848,15 @@ def cmd_eval(args: argparse.Namespace) -> int:
         ]
         pooled_screen = report.screening.get("pooled", {}).get("anaemia", {})
         if "sensitivity" in pooled_screen:
-            lines.extend([
-                "-" * 60,
-                f"  WHO Screening Sensitivity: {pooled_screen['sensitivity'] * 100:.1f}%",
-                f"  WHO Screening Specificity: {pooled_screen['specificity'] * 100:.1f}%",
-                f"  WHO Screening PPV:         {pooled_screen['ppv'] * 100:.1f}%",
-                f"  WHO Screening NPV:         {pooled_screen['npv'] * 100:.1f}%",
-            ])
+            lines.extend(
+                [
+                    "-" * 60,
+                    f"  WHO Screening Sensitivity: {pooled_screen['sensitivity'] * 100:.1f}%",
+                    f"  WHO Screening Specificity: {pooled_screen['specificity'] * 100:.1f}%",
+                    f"  WHO Screening PPV:         {pooled_screen['ppv'] * 100:.1f}%",
+                    f"  WHO Screening NPV:         {pooled_screen['npv'] * 100:.1f}%",
+                ]
+            )
         lines.append("")
         output_str = "\n".join(lines)
 

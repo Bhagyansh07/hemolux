@@ -24,14 +24,16 @@ def dummy_predictions_df() -> pd.DataFrame:
     sex = ["M", "F"] * (n // 2)
     confidence = np.clip(1.0 - np.abs(y_true - y_pred) / 3.0, 0.1, 0.95)
 
-    return pd.DataFrame({
-        "y_true": y_true,
-        "y_pred": y_pred,
-        "ita": ita,
-        "site": site,
-        "sex": sex,
-        "confidence": confidence,
-    })
+    return pd.DataFrame(
+        {
+            "y_true": y_true,
+            "y_pred": y_pred,
+            "ita": ita,
+            "site": site,
+            "sex": sex,
+            "confidence": confidence,
+        }
+    )
 
 
 def test_eval_harness_computes_complete_metrics(dummy_predictions_df: pd.DataFrame) -> None:
@@ -73,12 +75,16 @@ def test_eval_harness_markdown_output(dummy_predictions_df: pd.DataFrame) -> Non
     assert "Selective Prediction" in md
 
 
-def test_eval_cli_runs_and_writes_output(tmp_path: Path, dummy_predictions_df: pd.DataFrame) -> None:
+def test_eval_cli_runs_and_writes_output(
+    tmp_path: Path, dummy_predictions_df: pd.DataFrame
+) -> None:
     csv_path = tmp_path / "preds.csv"
     dummy_predictions_df.to_csv(csv_path, index=False)
 
     out_md = tmp_path / "audit_report.md"
-    exit_code = main(["eval", "--predictions", str(csv_path), "--format", "markdown", "--out", str(out_md)])
+    exit_code = main(
+        ["eval", "--predictions", str(csv_path), "--format", "markdown", "--out", str(out_md)]
+    )
 
     assert exit_code == 0
     assert out_md.is_file()
@@ -87,7 +93,9 @@ def test_eval_cli_runs_and_writes_output(tmp_path: Path, dummy_predictions_df: p
     assert "Confound" in content
 
 
-def test_eval_cli_json_format(tmp_path: Path, dummy_predictions_df: pd.DataFrame, capsys: pytest.CaptureFixture) -> None:
+def test_eval_cli_json_format(
+    tmp_path: Path, dummy_predictions_df: pd.DataFrame, capsys: pytest.CaptureFixture
+) -> None:
     csv_path = tmp_path / "preds.csv"
     dummy_predictions_df.to_csv(csv_path, index=False)
 

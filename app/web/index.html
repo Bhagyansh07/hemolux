@@ -53,8 +53,8 @@
     <link rel="manifest" href="manifest.webmanifest" />
 
     <!-- Preload critical assets -->
-    <link rel="preload" href="styles.css?v=20261005" as="style" />
-    <link rel="stylesheet" href="styles.css?v=20261005" />
+    <link rel="preload" href="styles.css?v=20261005_v3" as="style" />
+    <link rel="stylesheet" href="styles.css?v=20261005_v3" />
 
     <!-- JSON-LD Structured Data Schema -->
     <script type="application/ld+json">
@@ -145,12 +145,23 @@
     </header>
 
     <main class="shell" id="main-content">
-      <h1 class="sr-only" data-i18n="app.title">Hemolux: Non-invasive haemoglobin screening from conjunctiva photography</h1>
-
       <!-- ------------------------------------------------------------ *
            Screen — capture, then readout
            ------------------------------------------------------------ -->
       <section id="panel-screen" class="panel panel--flush" role="tabpanel" aria-label="Screen">
+        <div class="screen-header">
+          <span class="label" data-i18n="app.badge">Clinical Research Aid</span>
+          <h1 class="screen-title" data-i18n="app.title">Non-Invasive Haemoglobin Screening</h1>
+          <p class="screen-desc" data-i18n="app.desc">
+            Estimates haemoglobin from a photograph of the lower-eyelid conjunctiva. 100% on-device AI screening with skin-tone and lighting fairness audits.
+          </p>
+          <div class="screen-badges">
+            <span class="chip-badge"><span class="chip-badge__dot"></span> On-device WASM</span>
+            <span class="chip-badge"><span class="chip-badge__dot chip-badge__dot--warn"></span> ITA° skin-tone audit</span>
+            <span class="chip-badge"><span class="chip-badge__dot chip-badge__dot--ok"></span> 0 KB uploaded</span>
+          </div>
+        </div>
+
         <div class="stage" id="stage">
           <video id="video" playsinline muted autoplay hidden></video>
           <img id="still" alt="Captured conjunctiva camera frame for haemoglobin analysis" hidden />
@@ -653,6 +664,6 @@
       </div>
     </footer>
 
-    <script type="module" src="src/app.js?v=20261005"></script>
+    <script type="module" src="src/app.js?v=20261005_v3"></script>
   </body>
 </html>

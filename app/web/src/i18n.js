@@ -6,7 +6,10 @@
 
 export const MESSAGES = {
   en: {
-    "app.title": "Hemolux: Non-invasive haemoglobin screening from conjunctiva photography",
+    "app.badge": "Clinical Research Aid",
+    "app.title": "Non-Invasive Haemoglobin Screening",
+    "app.desc":
+      "Estimates haemoglobin from a photograph of the lower-eyelid conjunctiva. 100% on-device AI screening with skin-tone and lighting fairness audits.",
     "tag.research": "Research prototype",
     "nav.screen": "Screen",
     "nav.evidence": "Evidence",
@@ -161,7 +164,10 @@ export const MESSAGES = {
   },
 
   hi: {
-    "app.title": "हेमोलक्स: कंजंक्टिवा फ़ोटोग्राफ़ी से गैर-आक्रामक हीमोग्लोबिन स्क्रीनिंग",
+    "app.badge": "नैदानिक शोध सहायता",
+    "app.title": "गैर-आक्रामक हीमोग्लोबिन स्क्रीनिंग",
+    "app.desc":
+      "निचली पलक की कंजंक्टिवा फ़ोटो से हीमोग्लोबिन अनुमान। 100% ऑन-डिवाइस व त्वचा-रंग व प्रकाश निष्पक्षता ऑडिट सहित।",
     "tag.research": "रिसर्च प्रोटोटाइप",
     "nav.screen": "जाँच",
     "nav.evidence": "प्रमाण",

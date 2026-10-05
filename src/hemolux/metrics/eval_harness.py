@@ -72,34 +72,40 @@ class EvalReport:
         ]
         pooled_anaemia = self.screening.get("pooled", {}).get("anaemia", {})
         if "sensitivity" in pooled_anaemia:
-            lines.extend([
-                f"| **Sensitivity (Recall)** | {pooled_anaemia['sensitivity'] * 100:.1f}% |",
-                f"| **Specificity** | {pooled_anaemia['specificity'] * 100:.1f}% |",
-                f"| **Precision (PPV)** | {pooled_anaemia['ppv'] * 100:.1f}% |",
-                f"| **Negative Predictive Value (NPV)** | {pooled_anaemia['npv'] * 100:.1f}% |",
-            ])
+            lines.extend(
+                [
+                    f"| **Sensitivity (Recall)** | {pooled_anaemia['sensitivity'] * 100:.1f}% |",
+                    f"| **Specificity** | {pooled_anaemia['specificity'] * 100:.1f}% |",
+                    f"| **Precision (PPV)** | {pooled_anaemia['ppv'] * 100:.1f}% |",
+                    f"| **Negative Predictive Value (NPV)** | {pooled_anaemia['npv'] * 100:.1f}% |",
+                ]
+            )
         else:
             lines.append("| Status | Classification metrics pending sex labels |")
 
-        lines.extend([
-            "",
-            "## 3. Pigmentation Fairness Audit (ITA° Subgroups)",
-            "",
-            f"**Fairness Gate Verdict:** `{self.fairness.get('verdict', 'unknown')}`",
-            f"**Bias vs ITA Slope:** {self.fairness.get('slope', 0.0):+.4f} g/dL per degree ITA",
-            f"**95% Bootstrap CI:** [{self.fairness.get('ci_low', 0.0):+.4f}, {self.fairness.get('ci_high', 0.0):+.4f}]",
-            "",
-            "## 4. Cross-Site Calibration & Confound",
-            "",
-            f"> **Confound Disclosure:** {SITE_CONFOUND}",
-            "",
-            "## 5. Selective Prediction (Value of Abstaining)",
-            "",
-            "| Coverage | MAE (g/dL) | Rejection Rate |",
-            "| --- | --- | --- |",
-        ])
+        lines.extend(
+            [
+                "",
+                "## 3. Pigmentation Fairness Audit (ITA° Subgroups)",
+                "",
+                f"**Fairness Gate Verdict:** `{self.fairness.get('verdict', 'unknown')}`",
+                f"**Bias vs ITA Slope:** {self.fairness.get('slope', 0.0):+.4f} g/dL per degree ITA",
+                f"**95% Bootstrap CI:** [{self.fairness.get('ci_low', 0.0):+.4f}, {self.fairness.get('ci_high', 0.0):+.4f}]",
+                "",
+                "## 4. Cross-Site Calibration & Confound",
+                "",
+                f"> **Confound Disclosure:** {SITE_CONFOUND}",
+                "",
+                "## 5. Selective Prediction (Value of Abstaining)",
+                "",
+                "| Coverage | MAE (g/dL) | Rejection Rate |",
+                "| --- | --- | --- |",
+            ]
+        )
         for row in self.risk_coverage:
-            lines.append(f"| {row['coverage'] * 100:.0f}% | {row['mae']:.3f} | {row['rejection_rate'] * 100:.0f}% |")
+            lines.append(
+                f"| {row['coverage'] * 100:.0f}% | {row['mae']:.3f} | {row['rejection_rate'] * 100:.0f}% |"
+            )
 
         lines.append("")
         return "\n".join(lines)
@@ -190,7 +196,9 @@ def run_evaluation(
         }
 
     # 4. Site Audit
-    confidence = np.asarray(df[confidence_col], dtype=np.float64) if confidence_col in df.columns else None
+    confidence = (
+        np.asarray(df[confidence_col], dtype=np.float64) if confidence_col in df.columns else None
+    )
     correct = np.abs(y_true - y_pred) <= 1.0 if confidence is not None else None
     site_audit_obj = audit_sites(y_true, y_pred, sex, site, confidence=confidence, correct=correct)
     site_audit_dict = site_audit_obj.to_dict()
@@ -208,11 +216,13 @@ def run_evaluation(
     target_coverages = [1.0, 0.9, 0.8, 0.7]
     for cov in target_coverages:
         best_pt = min(rc_curve, key=lambda pt: abs(pt.coverage - cov))
-        risk_cov_list.append({
-            "coverage": float(best_pt.coverage),
-            "mae": float(best_pt.mae),
-            "rejection_rate": float(round(1.0 - best_pt.coverage, 4)),
-        })
+        risk_cov_list.append(
+            {
+                "coverage": float(best_pt.coverage),
+                "mae": float(best_pt.mae),
+                "rejection_rate": float(round(1.0 - best_pt.coverage, 4)),
+            }
+        )
 
     return EvalReport(
         n_samples=n,

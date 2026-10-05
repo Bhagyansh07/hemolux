@@ -282,6 +282,74 @@ a {
 }
 
 /* ------------------------------------------------------------------ *
+ * Screen Header (Visible H1 & Contextual Instrumentation Badges)
+ * ------------------------------------------------------------------ */
+
+.screen-header {
+  padding: 24px 24px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.screen-header .label {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: var(--signal);
+}
+
+.screen-title {
+  font-size: clamp(22px, 3.5vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+
+.screen-desc {
+  font-size: 14px;
+  color: var(--text-dim);
+  max-width: 65ch;
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+
+.screen-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: var(--radius-1);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-dim);
+}
+
+.chip-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--signal);
+}
+
+.chip-badge__dot--ok {
+  background: var(--ok);
+}
+
+.chip-badge__dot--warn {
+  background: var(--warn);
+}
+
+/* ------------------------------------------------------------------ *
  * Capture
  * ------------------------------------------------------------------ */
 

@@ -307,7 +307,9 @@ class FeatureSet:
         """
         if self.kind == "deep":
             return self
-        drop_colour = {COLOUR_COLUMNS.index(name) for name in UNDEFINED_FEATURES if name in COLOUR_COLUMNS}
+        drop_colour = {
+            COLOUR_COLUMNS.index(name) for name in UNDEFINED_FEATURES if name in COLOUR_COLUMNS
+        }
         if not drop_colour:
             return self
         if self.kind == "colour":

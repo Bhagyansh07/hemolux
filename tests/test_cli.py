@@ -44,7 +44,7 @@ ROOT = Path(__file__).resolve().parents[1]
 #: One list, used by both the help test and the count test. Written out once here
 #: rather than inline in each so that adding a subcommand makes both fail until it has
 #: been added to the module docstring too -- which is the review that should happen.
-SUBCOMMANDS = ("validate", "features", "train", "sweep", "export", "report")
+SUBCOMMANDS = ("validate", "features", "train", "sweep", "export", "report", "eval")
 
 
 def _load(name: str):

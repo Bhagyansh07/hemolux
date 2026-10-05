@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use Hemolux in your research or clinical benchmarking, please cite it using the metadata from this file."
+title: "Hemolux: Non-Invasive Conjunctival Pallor Screening with Fairness-Audited Selective Prediction"
+version: "0.1.0-alpha"
+date-released: 2024-10-05
+license: "MIT"
+repository-code: "https://github.com/Bhagyansh07/hemolux"
+url: "https://hemolux.pages.dev"
+authors:
+  - family-names: "Research Team"
+    given-names: "Hemolux"
+    affiliation: "Hemolux Open Science Collaboration"
+keywords:
+  - "anaemia screening"
+  - "conjunctival pallor"
+  - "algorithmic fairness"
+  - "selective prediction"
+  - "ordinal classification"
+  - "mobile health"
+  - "edge AI"
+  - "individual typology angle"
+abstract: >-
+  Hemolux is an edge-native, zero-cloud non-invasive conjunctival pallor screening
+  system engineered for low-resource smartphone environments. It features an
+  ordinal regression architecture, calibrated selective prediction (abstaining
+  under adverse optical conditions), and comprehensive fairness auditing across
+  skin phototypes (Individual Typology Angle).

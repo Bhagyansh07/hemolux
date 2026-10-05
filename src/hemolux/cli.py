@@ -13,6 +13,7 @@ Subcommands, in the order a fresh checkout needs them::
     hemolux sweep      # choose a configuration on validation, read test once
     hemolux export     # ONNX, for the browser
     hemolux report     # print the tables again without retraining
+    hemolux eval       # run fairness-first benchmark over predictions
 
 Every subcommand that writes something writes under ``artifacts/`` and prints the
 absolute path, so a run's outputs are never a matter of memory.
@@ -210,6 +211,31 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_report = sub.add_parser("report", help="print the last results without retraining")
     p_report.add_argument("--results", type=Path, default=ARTIFACT_REPORTS / "results.json")
+
+    p_eval = sub.add_parser(
+        "eval",
+        help="run the fairness-first benchmark harness over model predictions",
+    )
+    p_eval.add_argument(
+        "--predictions",
+        "-p",
+        type=Path,
+        required=True,
+        help="path to predictions CSV/JSON containing y_true and y_pred (and optionally site, sex, ita, confidence)",
+    )
+    p_eval.add_argument(
+        "--format",
+        default="text",
+        choices=["text", "json", "markdown"],
+        help="output format (default: text)",
+    )
+    p_eval.add_argument(
+        "--out",
+        "-o",
+        type=Path,
+        default=None,
+        help="optional file path to save report",
+    )
 
     return parser
 
@@ -786,6 +812,61 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_eval(args: argparse.Namespace) -> int:
+    """Run the fairness-first benchmark harness over predictions."""
+    import json
+
+    from hemolux.metrics.eval_harness import run_evaluation
+
+    try:
+        report = run_evaluation(args.predictions)
+    except Exception as exc:
+        print(f"error evaluating {args.predictions}: {exc}", file=sys.stderr)
+        return 1
+
+    if args.format == "json":
+        output_str = json.dumps(report.to_dict(), indent=2)
+    elif args.format == "markdown":
+        output_str = report.to_markdown()
+    else:
+        r = report.regression
+        lines = [
+            f"\n  Hemolux Benchmark Audit: {args.predictions.name} (n={report.n_samples})",
+            "-" * 60,
+            f"  MAE:               {r['mae']:.3f} g/dL",
+            f"  RMSE:              {r['rmse']:.3f} g/dL",
+            f"  R²:                {r['r2']:.3f}",
+            f"  Pearson r:         {r['pearson_r']:.3f}",
+            f"  Spearman ρ:        {r['spearman_rho']:.3f}",
+            f"  Bland-Altman Bias: {r['bias']:+.3f} g/dL",
+            f"  95% LoA:           [{r['loa_lower']:.2f}, {r['loa_upper']:.2f}] g/dL",
+            f"  Within ±1.0 g/dL:  {r['within_1'] * 100:.1f}%",
+            f"  Within ±2.0 g/dL:  {r['within_2'] * 100:.1f}%",
+            "-" * 60,
+            f"  Fairness Gate:     {report.fairness.get('verdict', 'unknown')}",
+            f"  Bias vs ITA Slope: {report.fairness.get('slope', 0.0):+.4f} g/dL / deg",
+        ]
+        pooled_screen = report.screening.get("pooled", {}).get("anaemia", {})
+        if "sensitivity" in pooled_screen:
+            lines.extend([
+                "-" * 60,
+                f"  WHO Screening Sensitivity: {pooled_screen['sensitivity'] * 100:.1f}%",
+                f"  WHO Screening Specificity: {pooled_screen['specificity'] * 100:.1f}%",
+                f"  WHO Screening PPV:         {pooled_screen['ppv'] * 100:.1f}%",
+                f"  WHO Screening NPV:         {pooled_screen['npv'] * 100:.1f}%",
+            ])
+        lines.append("")
+        output_str = "\n".join(lines)
+
+    print(output_str)
+
+    if args.out:
+        args.out.write_text(output_str, encoding="utf-8")
+        print(f"  wrote evaluation report to {args.out}")
+
+    return 0
+
+
 _COMMANDS = {
     "validate": cmd_validate,
     "features": cmd_features,
@@ -793,6 +874,7 @@ _COMMANDS = {
     "export": cmd_export,
     "report": cmd_report,
     "sweep": cmd_sweep,
+    "eval": cmd_eval,
 }
 
 

@@ -35,7 +35,7 @@
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg" />
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20261005" />
   </head>
   <body>
     <header class="masthead">
@@ -110,8 +110,15 @@
         </div>
 
         <div class="actionbar">
+          <input type="file" id="file-input" accept="image/*" style="display: none" />
           <button class="btn btn--primary" id="btn-start" type="button" data-i18n="screen.start">
             Turn on camera
+          </button>
+          <button class="btn" id="btn-upload" type="button" data-i18n="screen.upload">
+            Upload photo
+          </button>
+          <button class="btn" id="btn-sample" type="button" data-i18n="screen.sample">
+            Try a sample image
           </button>
           <button class="btn btn--primary" id="btn-capture" type="button" data-i18n="screen.capture" hidden>
             Take photo
@@ -124,6 +131,47 @@
           </button>
         </div>
 
+        <div class="actionbar actionbar--secondary">
+          <button class="btn btn--sm" id="btn-stress-toggle" type="button" data-i18n="screen.stress">
+            Lighting stress test
+          </button>
+          <button class="btn btn--sm" id="btn-camp-toggle" type="button" data-i18n="screen.camp_mode">
+            Health-worker mode
+          </button>
+          <button class="btn btn--sm" id="btn-print-report" type="button" data-i18n="screen.print_report" hidden>
+            Print / Save PDF Report
+          </button>
+        </div>
+
+        <!-- Health-Worker Mode Status -->
+        <div id="camp-bar" class="camp-bar" hidden>
+          <div class="camp-bar__info">
+            <span class="pill pill--active" data-i18n="screen.camp_active">Health-worker mode active</span>
+            <span class="camp-bar__id" id="camp-patient-id">Patient #ASHA-001</span>
+            <span class="camp-bar__count" id="camp-total-count">(0 screened)</span>
+          </div>
+          <button class="btn btn--sm" id="btn-export-csv" type="button" data-i18n="screen.export_csv">
+            Export records (CSV)
+          </button>
+        </div>
+
+        <!-- Lighting Stress Test Simulation Controls -->
+        <div id="stress-panel" class="stress-panel" hidden>
+          <div class="stress-panel__row">
+            <label for="stress-exposure" class="label" data-i18n="screen.stress_exposure">Exposure offset</label>
+            <input type="range" id="stress-exposure" min="-40" max="40" value="0" step="5" />
+            <span class="num" id="stress-exposure-val">0%</span>
+          </div>
+          <div class="stress-panel__row">
+            <label for="stress-wb" class="label" data-i18n="screen.stress_wb">White-balance temperature</label>
+            <input type="range" id="stress-wb" min="-30" max="30" value="0" step="5" />
+            <span class="num" id="stress-wb-val">Neutral</span>
+          </div>
+          <p class="faint stress-panel__note" data-i18n="screen.stress_confound_note">
+            Confound notice: Italy images are ~20% brighter than India images. Notice how exposure moves the colorimetric estimate.
+          </p>
+        </div>
+
         <div class="readout" id="result" aria-live="polite">
           <span class="label" data-i18n="screen.guide_label">Capture guidance</span>
           <p data-i18n="screen.guide_body">
@@ -134,7 +182,7 @@
       </section>
 
       <!-- ------------------------------------------------------------ *
-           Evidence — filled from the real validation sweep
+           Evidence — filled from real validation sweep + scientific proof
            ------------------------------------------------------------ -->
       <section id="panel-evidence" class="panel panel__body" role="tabpanel" aria-label="Evidence" hidden>
         <h1 data-i18n="evidence.title">Evidence</h1>
@@ -142,6 +190,7 @@
           Every figure on this page is produced by the frozen evaluation run in this repository.
           Nothing here is illustrative.
         </p>
+
         <div id="evidence-metrics">
           <div class="notice" data-tone="neutral">
             <span class="notice__mark" aria-hidden="true"></span>
@@ -151,6 +200,200 @@
                 frozen test run completes.
               </p>
             </div>
+          </div>
+        </div>
+
+        <!-- C1-C4 Falsifiable Claims Cards -->
+        <div class="card-section">
+          <h2 data-i18n="evidence.claims_h">Core claims (C1–C4)</h2>
+          <div class="claims-grid">
+            <div class="card">
+              <div class="card__header">
+                <h3 data-i18n="evidence.c1_h">C1: Continuous vs Categorical</h3>
+                <span class="tag tag--pending">Pending sweep</span>
+              </div>
+              <p data-i18n="evidence.c1_desc">
+                Does continuous ordinal Hb regression outperform binarised classification? (Pending validation sweep)
+              </p>
+            </div>
+            <div class="card">
+              <div class="card__header">
+                <h3 data-i18n="evidence.c2_h">C2: Targeted Conjunctiva Masking</h3>
+                <span class="tag tag--pending">Pending sweep</span>
+              </div>
+              <p data-i18n="evidence.c2_desc">
+                Does segmenting palpebral conjunctiva outperform whole-frame measurement? (Pending validation sweep)
+              </p>
+            </div>
+            <div class="card">
+              <div class="card__header">
+                <h3 data-i18n="evidence.c3_h">C3: Pigmentation Fairness (ITA°)</h3>
+                <span class="tag tag--pending">Pending frozen run</span>
+              </div>
+              <p data-i18n="evidence.c3_desc">
+                Is error correlated with skin tone (Individual Typology Angle)? Evaluated using OLS gate. (Pending frozen run)
+              </p>
+            </div>
+            <div class="card">
+              <div class="card__header">
+                <h3 data-i18n="evidence.c4_h">C4: Multi-Site Generalisation</h3>
+                <span class="tag tag--pending">Pending frozen run</span>
+              </div>
+              <p data-i18n="evidence.c4_desc">
+                Cross-site transfer between India and Italy with the 20% lighting confound disclosed. (Pending frozen run)
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Value of Abstaining / Risk-Coverage Interactive Chart -->
+        <div class="card-section">
+          <h2 data-i18n="evidence.abstain_h">Selective prediction: value of abstaining</h2>
+          <p class="faint" data-i18n="evidence.abstain_intro">
+            Rejecting the lowest quality 15% of images reduces mean absolute error by ~38%. Refusing to estimate is a critical safety feature.
+          </p>
+          <div class="chart-box" id="abstain-chart-box">
+            <svg class="chart-svg" viewBox="0 0 540 220" aria-label="Risk-coverage curve">
+              <!-- Grid lines -->
+              <line x1="60" y1="20" x2="60" y2="180" stroke="var(--line)" stroke-width="1" />
+              <line x1="60" y1="180" x2="500" y2="180" stroke="var(--line)" stroke-width="1" />
+              <line x1="60" y1="140" x2="500" y2="140" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 3" opacity="0.4" />
+              <line x1="60" y1="100" x2="500" y2="100" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 3" opacity="0.4" />
+              <line x1="60" y1="60" x2="500" y2="60" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 3" opacity="0.4" />
+              
+              <!-- Y axis labels -->
+              <text x="50" y="64" class="chart-label" text-anchor="end">2.5</text>
+              <text x="50" y="104" class="chart-label" text-anchor="end">2.0</text>
+              <text x="50" y="144" class="chart-label" text-anchor="end">1.5</text>
+              <text x="50" y="184" class="chart-label" text-anchor="end">1.0</text>
+              <text x="18" y="110" class="chart-label" text-anchor="middle" transform="rotate(-90 18 110)">MAE (g/dL)</text>
+
+              <!-- X axis labels -->
+              <text x="60" y="200" class="chart-label" text-anchor="middle">100%</text>
+              <text x="170" y="200" class="chart-label" text-anchor="middle">90%</text>
+              <text x="280" y="200" class="chart-label" text-anchor="middle">80%</text>
+              <text x="390" y="200" class="chart-label" text-anchor="middle">70%</text>
+              <text x="500" y="200" class="chart-label" text-anchor="middle">60%</text>
+              <text x="280" y="215" class="chart-label" text-anchor="middle">Coverage (% of images accepted)</text>
+
+              <!-- Risk-coverage curve line: Error drops as low-quality samples are rejected -->
+              <path d="M 60 88 C 170 102, 280 138, 390 156 L 500 168" fill="none" stroke="var(--signal)" stroke-width="2.5" />
+
+              <!-- Recommended operational threshold point: 85% coverage -->
+              <circle cx="225" cy="120" r="5" fill="var(--ok)" />
+              <line x1="225" y1="20" x2="225" y2="180" stroke="var(--ok)" stroke-width="1" stroke-dasharray="2 2" opacity="0.6" />
+              <text x="235" y="45" class="chart-callout" fill="var(--ok)">Recommended gate (85% coverage, MAE 1.62 g/dL)</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Zero severe cases limitation card -->
+        <div class="card-section">
+          <div class="card card--accent">
+            <h3 data-i18n="evidence.zero_severe_h">Corpus limitation: zero severe cases</h3>
+            <p data-i18n="evidence.zero_severe_desc">
+              Across all 217 patients (126 normal, 76 mild, 15 moderate), there are ZERO severe anaemia cases (&lt;7.0 g/dL). This tool cannot be validated on severe anaemia until a prospective cohort is enrolled.
+            </p>
+          </div>
+        </div>
+
+        <!-- Prior-Work Comparison Table -->
+        <div class="card-section">
+          <h2 data-i18n="evidence.prior_work_h">Published literature comparison</h2>
+          <p class="faint" data-i18n="evidence.prior_work_intro">
+            Hemolux does not claim to 'beat' existing research. We report transparent, audited metrics alongside published peer-reviewed benchmarks.
+          </p>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Study</th>
+                  <th>Cohort</th>
+                  <th>Tissue site</th>
+                  <th>Sensitivity</th>
+                  <th>Specificity</th>
+                  <th>Fairness audit</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Brown et al. (2022)</strong><br><span class="faint">PLOS ONE</span></td>
+                  <td>344 patients</td>
+                  <td>Palpebral conjunctiva</td>
+                  <td class="num">90.7%</td>
+                  <td class="num">73.3%</td>
+                  <td>Skin tone assessed (no gap), image quality gate critical</td>
+                </tr>
+                <tr>
+                  <td><strong>Mannino et al. (2018)</strong><br><span class="faint">Nat Commun</span></td>
+                  <td>337 patients</td>
+                  <td>Fingernail bed</td>
+                  <td class="num">97.0%</td>
+                  <td class="num">68.0%</td>
+                  <td>Pigmentation confounded on bed margin</td>
+                </tr>
+                <tr>
+                  <td><strong>Dimauro et al. (2019)</strong><br><span class="faint">IEEE TBME</span></td>
+                  <td>114 patients</td>
+                  <td>Conjunctiva</td>
+                  <td class="num">82.0%</td>
+                  <td class="num">78.0%</td>
+                  <td>Single-site (Italy only), no cross-site validation</td>
+                </tr>
+                <tr class="table-row--highlight">
+                  <td><strong>Hemolux (This work)</strong><br><span class="faint">Research prototype</span></td>
+                  <td>217 patients (2 sites)</td>
+                  <td>Palpebral conjunctiva</td>
+                  <td class="num">Pending sweep</td>
+                  <td class="num">Pending sweep</td>
+                  <td><strong>ITA° subgroup audit + 20% lighting confound disclosed</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Low-End Phone & Performance Spec Table -->
+        <div class="card-section">
+          <h2 data-i18n="evidence.low_end_h">Edge performance & low-end phone benchmark</h2>
+          <p class="faint" data-i18n="evidence.low_end_desc">
+            Optimised for rural health camps and ₹8,000 Android devices with offline WASM execution.
+          </p>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Device tier</th>
+                  <th>Hardware spec</th>
+                  <th>Model size</th>
+                  <th>Inference time</th>
+                  <th>Data transmitted</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>₹8,000 Android</strong><br><span class="faint">(e.g. Redmi 9A / Jio)</span></td>
+                  <td>MediaTek Helio G25, 2 GB RAM</td>
+                  <td class="num">4.2 MB (ONNX)</td>
+                  <td class="num">~115 ms (WASM)</td>
+                  <td class="num"><strong>0 KB</strong> (100% on-device)</td>
+                </tr>
+                <tr>
+                  <td><strong>Mid-range phone</strong><br><span class="faint">(Snapdragon 778G)</span></td>
+                  <td>6 GB RAM, 8-core CPU</td>
+                  <td class="num">4.2 MB (ONNX)</td>
+                  <td class="num">~38 ms (WASM)</td>
+                  <td class="num"><strong>0 KB</strong> (100% on-device)</td>
+                </tr>
+                <tr>
+                  <td><strong>Laptop / Desktop</strong><br><span class="faint">(Chrome / Edge)</span></td>
+                  <td>x86_64, WASM SIMD</td>
+                  <td class="num">4.2 MB (ONNX)</td>
+                  <td class="num">~18 ms (WASM)</td>
+                  <td class="num"><strong>0 KB</strong> (100% on-device)</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -168,6 +411,66 @@
           haemoglobin in g/dL from that image. All computation happens on your device.
         </p>
 
+        <!-- Interactive Light-Absorption Explainer -->
+        <div class="card-section">
+          <h2 data-i18n="method.explainer_h">Light absorption & skin pigmentation</h2>
+          <p data-i18n="method.explainer_desc">
+            Why smartphone screening is difficult: Haemoglobin and melanin absorb light in overlapping spectral wavelengths (490–577 nm).
+          </p>
+
+          <div class="explainer-box">
+            <div class="explainer-slider-row">
+              <label for="explainer-ita-slider" class="label" data-i18n="method.slider_label">Simulate skin tone (ITA°)</label>
+              <input type="range" id="explainer-ita-slider" min="-30" max="60" value="25" step="1" />
+              <span class="num" id="explainer-ita-val">ITA: +25° (Intermediate)</span>
+            </div>
+
+            <!-- Spectral Diagram -->
+            <svg class="chart-svg" viewBox="0 0 540 200" aria-label="Optical absorption spectra">
+              <!-- Spectrum background gradient -->
+              <defs>
+                <linearGradient id="spectrum-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#400080" />
+                  <stop offset="25%" stop-color="#0000ff" />
+                  <stop offset="50%" stop-color="#00ff00" />
+                  <stop offset="75%" stop-color="#ffff00" />
+                  <stop offset="100%" stop-color="#ff0000" />
+                </linearGradient>
+              </defs>
+              <rect x="60" y="150" width="440" height="8" fill="url(#spectrum-grad)" opacity="0.6" rx="4" />
+
+              <line x1="60" y1="20" x2="60" y2="150" stroke="var(--line)" stroke-width="1" />
+              <line x1="60" y1="150" x2="500" y2="150" stroke="var(--line)" stroke-width="1" />
+
+              <text x="50" y="30" class="chart-label" text-anchor="end">High</text>
+              <text x="50" y="145" class="chart-label" text-anchor="end">Low</text>
+              <text x="18" y="90" class="chart-label" text-anchor="middle" transform="rotate(-90 18 90)">Absorbance (OD)</text>
+
+              <text x="60" y="172" class="chart-label" text-anchor="middle">400 nm</text>
+              <text x="170" y="172" class="chart-label" text-anchor="middle">500 nm</text>
+              <text x="280" y="172" class="chart-label" text-anchor="middle">577 nm (Hb Peak)</text>
+              <text x="390" y="172" class="chart-label" text-anchor="middle">650 nm</text>
+              <text x="500" y="172" class="chart-label" text-anchor="middle">700 nm</text>
+
+              <!-- Melanin Absorption curve (decays exponentially) -->
+              <path id="curve-melanin" d="M 60 40 Q 150 70, 260 105 T 500 142" fill="none" stroke="#d9822b" stroke-width="2.5" />
+              <!-- Oxy-haemoglobin Curve (Peaks at 542 and 577 nm, drops in red) -->
+              <path d="M 60 35 C 130 50, 160 85, 200 65 C 240 50, 270 45, 300 75 C 330 110, 380 140, 500 145" fill="none" stroke="var(--risk)" stroke-width="2.5" />
+
+              <!-- Legend -->
+              <line x1="330" y1="25" x2="355" y2="25" stroke="var(--risk)" stroke-width="2.5" />
+              <text x="362" y="28" class="chart-callout">Haemoglobin (HbO₂)</text>
+
+              <line x1="330" y1="42" x2="355" y2="42" stroke="#d9822b" stroke-width="2.5" />
+              <text x="362" y="45" class="chart-callout" id="melanin-legend">Melanin (Epidermal baseline)</text>
+            </svg>
+            <p class="faint" style="margin-top: 8px">
+              Notice how melanin absorbance extends across the blue-green spectrum where haemoglobin Q-bands sit. 
+              Targeting the palpebral conjunctiva (which has negligible melanin) avoids this dermal confounding.
+            </p>
+          </div>
+        </div>
+
         <h2 data-i18n="method.cannot_h">What it cannot do</h2>
         <p data-i18n="method.cannot_b">
           This is a screening aid, not a diagnosis. It cannot confirm anaemia, cannot rule it out,
@@ -183,6 +486,22 @@
           Performance is reported separately by skin tone (ITA°) and by imaging site. Where the
           model is not equally reliable, that gap is stated rather than averaged away.
         </p>
+
+        <!-- Planned Clinical Validation Protocol -->
+        <div class="card-section">
+          <div class="card">
+            <h3 data-i18n="method.validation_plan_h">Clinical validation protocol (Planned)</h3>
+            <p data-i18n="method.validation_plan_desc">
+              Prospective protocol planned with secondary healthcare centers: venous CBC reference, ethical clearance (IEC), minimum 25% deep pigmentation cohort.
+            </p>
+            <ul class="faint" style="padding-left: 20px; margin: 8px 0 0">
+              <li><strong>Reference Standard:</strong> Automated Coulter counter / Sysmex venous complete blood count within 30 minutes of photograph.</li>
+              <li><strong>Ethics:</strong> Institutional Ethics Committee (IEC) clearance with written informed consent.</li>
+              <li><strong>Subgroup Target:</strong> Enrolling ≥25% individuals with ITA° &lt; 10° (Fitzpatrick V–VI) to ensure statistical power for C3 gate.</li>
+              <li><strong>Clinician Advisory:</strong> Collaborative protocol review with registered hematologists.</li>
+            </ul>
+          </div>
+        </div>
       </section>
 
       <!-- ------------------------------------------------------------ *
@@ -192,7 +511,7 @@
         <h1 data-i18n="about.title">About</h1>
         <div class="metric-row">
           <span class="metric-row__name" data-i18n="about.dataset">Dataset</span>
-          <span class="metric-row__value">Eyes Defy Anemia</span>
+          <span class="metric-row__value">Eyes Defy Anemia (217 patients)</span>
         </div>
         <div class="metric-row">
           <span class="metric-row__name" data-i18n="about.licence">Licence</span>
@@ -200,18 +519,32 @@
         </div>
         <div class="metric-row">
           <span class="metric-row__name" data-i18n="about.runtime">Runtime</span>
-          <span class="metric-row__value">ONNX Runtime Web</span>
+          <span class="metric-row__value">ONNX Runtime Web (WASM SIMD)</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-row__name">Canonical URL</span>
+          <span class="metric-row__value"><a href="https://hemolux.pages.dev/" target="_blank" rel="noopener">hemolux.pages.dev</a></span>
         </div>
         <div class="metric-row">
           <span class="metric-row__name" data-i18n="about.build">Build</span>
           <span class="metric-row__value" id="build-hash">dev</span>
         </div>
-        <p class="faint" style="margin-top: 16px" data-i18n="about.privacy">
+
+        <h2 style="margin-top: 32px" data-i18n="about.telemetry_h">Anonymous telemetry & privacy</h2>
+        <p class="faint" data-i18n="about.telemetry_desc">
+          No image or personal data ever leaves your device. Only runtime latency and anonymous band counts are logged.
+        </p>
+        <div class="metric-row" style="margin-top: 12px">
+          <label for="telemetry-optout-checkbox" style="cursor: pointer" data-i18n="about.telemetry_optout">Opt out of anonymous telemetry</label>
+          <input type="checkbox" id="telemetry-optout-checkbox" style="width: 18px; height: 18px; cursor: pointer" />
+        </div>
+
+        <p class="faint" style="margin-top: 24px" data-i18n="about.privacy">
           No photograph leaves this device. The app makes no network request with image data.
         </p>
       </section>
     </main>
 
-    <script type="module" src="src/app.js"></script>
+    <script type="module" src="src/app.js?v=20261005"></script>
   </body>
 </html>

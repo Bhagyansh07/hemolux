@@ -6,6 +6,7 @@
 
 export const MESSAGES = {
   en: {
+    "app.title": "Hemolux: Non-invasive haemoglobin screening from conjunctiva photography",
     "tag.research": "Research prototype",
     "nav.screen": "Screen",
     "nav.evidence": "Evidence",
@@ -160,6 +161,7 @@ export const MESSAGES = {
   },
 
   hi: {
+    "app.title": "हेमोलक्स: कंजंक्टिवा फ़ोटोग्राफ़ी से गैर-आक्रामक हीमोग्लोबिन स्क्रीनिंग",
     "tag.research": "रिसर्च प्रोटोटाइप",
     "nav.screen": "जाँच",
     "nav.evidence": "प्रमाण",

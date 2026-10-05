@@ -95,7 +95,8 @@ body {
 
 h1,
 h2,
-h3 {
+h3,
+h4 {
   font-weight: 600;
   line-height: 1.2;
   margin: 0;
@@ -108,6 +109,18 @@ h1 {
 
 h2 {
   font-size: 18px;
+}
+
+h4 {
+  font-size: 14px;
+}
+
+.panel__title {
+  font-size: 24px;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0 0 12px;
 }
 
 p {
@@ -904,7 +917,8 @@ a {
   .stage__guide,
   #panel-evidence,
   #panel-method,
-  #panel-about {
+  #panel-about,
+  .footer {
     display: none !important;
   }
 
@@ -936,4 +950,115 @@ a {
     border-bottom: 1px solid #000;
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * Accessibility & Skip Link
+ * ------------------------------------------------------------------ */
+
+.skip-link {
+  position: absolute;
+  top: -999px;
+  left: 16px;
+  z-index: 100;
+  padding: 8px 16px;
+  background: var(--surface);
+  color: var(--signal);
+  border: 1px solid var(--signal);
+  border-radius: var(--radius-2);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  top: 16px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Footer (Crawlable internal links & technical citations)
+ * ------------------------------------------------------------------ */
+
+.footer {
+  border-top: 1px solid var(--line);
+  margin-top: 64px;
+  padding-top: 40px;
+}
+
+.footer__inner {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 32px;
+  margin-bottom: 32px;
+}
+
+.footer__brand p {
+  margin-top: 8px;
+  max-width: 44ch;
+}
+
+.footer__col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.footer__col a {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.15s ease;
+}
+
+.footer__col a:hover {
+  color: var(--signal);
+  text-decoration: underline;
+}
+
+.footer__bottom {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Mobile Responsiveness & Viewport Guardrails
+ * ------------------------------------------------------------------ */
+
+@media (max-width: 768px) {
+  .footer__inner {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .masthead__inner {
+    padding: 0 16px;
+    gap: 12px;
+  }
+  .masthead .tag {
+    display: none;
+  }
+  .nav {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    max-width: 100%;
+  }
+  .nav::-webkit-scrollbar {
+    display: none;
+  }
+  .nav__tab {
+    padding: 6px 10px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .shell {
+    padding: 0 16px 64px;
+  }
+}
+
 

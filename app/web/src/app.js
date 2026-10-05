@@ -64,14 +64,26 @@ let campIndex = 1;
  * Tabs
  * ------------------------------------------------------------------ */
 
-function setTab(name) {
+function setTab(name, updateHash = true) {
+  const valid = ["screen", "evidence", "method", "about"];
+  const target = valid.includes(name) ? name : "screen";
   for (const panel of document.querySelectorAll("main > section")) {
-    panel.hidden = panel.id !== `panel-${name}`;
+    panel.hidden = panel.id !== `panel-${target}`;
   }
   for (const tab of document.querySelectorAll(".nav__tab")) {
-    const on = tab.dataset.tab === name;
+    const on = tab.dataset.tab === target;
     tab.setAttribute("aria-current", on ? "page" : "false");
   }
+  if (updateHash && typeof window !== "undefined" && window.location.hash !== `#${target}`) {
+    history.replaceState(null, "", `#${target}`);
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("hashchange", () => {
+    const hash = window.location.hash.replace("#", "");
+    if (hash) setTab(hash, false);
+  });
 }
 
 /* ------------------------------------------------------------------ *
@@ -634,7 +646,8 @@ if (explainerSlider) {
   });
 }
 
-setTab("screen");
+const initialHash = (typeof window !== "undefined" && window.location.hash.replace("#", "")) || "";
+setTab(initialHash || "screen", false);
 renderLang();
 render();
 loadEvidence();

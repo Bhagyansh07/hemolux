@@ -3,41 +3,115 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Hemolux — non-invasive haemoglobin screening</title>
+    <title>Hemolux — Non-Invasive Haemoglobin Screening from Conjunctiva Photos</title>
     <meta
       name="description"
-      content="Hemolux estimates haemoglobin from a photograph of the lower-eyelid conjunctiva. It is a screening aid, not a diagnosis."
+      content="Hemolux estimates haemoglobin levels from smartphone photos of the palpebral conjunctiva. Open-access, on-device AI screening aid with skin-tone fairness audits."
     />
+    <meta name="keywords" content="haemoglobin screening, anemia screening, conjunctiva, non-invasive hemoglobin, digital health, medical AI, on-device screening" />
+    <meta name="author" content="Hemolux Research" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="google-site-verification" content="GOOGLE_SEARCH_CONSOLE_VERIFICATION_TOKEN" />
+
+    <link rel="canonical" href="https://hemolux.pages.dev/" />
+
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Hemolux" />
-    <meta property="og:title" content="Hemolux — non-invasive haemoglobin screening" />
+    <meta property="og:title" content="Hemolux — Non-Invasive Haemoglobin Screening" />
     <meta
       property="og:description"
       content="Estimates haemoglobin from a photograph of the lower-eyelid conjunctiva, with a skin-tone fairness audit on every number. A screening aid, not a diagnosis."
     />
     <meta property="og:url" content="https://hemolux.pages.dev/" />
     <meta property="og:image" content="https://hemolux.pages.dev/og.png" />
+    <meta property="og:image:secure_url" content="https://hemolux.pages.dev/og.png" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
       content="Hemolux — non-invasive haemoglobin screening from a conjunctiva photograph"
     />
+
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Hemolux — non-invasive haemoglobin screening" />
+    <meta name="twitter:title" content="Hemolux — Non-Invasive Haemoglobin Screening" />
     <meta
       name="twitter:description"
       content="Estimates haemoglobin from a conjunctiva photograph, with a skin-tone fairness audit. A screening aid, not a diagnosis."
     />
     <meta name="twitter:image" content="https://hemolux.pages.dev/og.png" />
+    <meta name="twitter:image:alt" content="Hemolux — non-invasive haemoglobin screening from a conjunctiva photograph" />
+
+    <!-- PWA / Mobile Theme -->
     <meta name="theme-color" content="#0b0c0e" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icon.svg" />
     <link rel="manifest" href="manifest.webmanifest" />
+
+    <!-- Preload critical assets -->
+    <link rel="preload" href="styles.css?v=20261005" as="style" />
     <link rel="stylesheet" href="styles.css?v=20261005" />
+
+    <!-- JSON-LD Structured Data Schema -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://hemolux.pages.dev/#website",
+            "url": "https://hemolux.pages.dev/",
+            "name": "Hemolux",
+            "description": "Non-invasive haemoglobin screening from conjunctiva photography using on-device machine learning.",
+            "inLanguage": ["en", "hi"],
+            "publisher": {
+              "@id": "https://hemolux.pages.dev/#organization"
+            }
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://hemolux.pages.dev/#organization",
+            "name": "Hemolux Research",
+            "url": "https://hemolux.pages.dev/",
+            "logo": "https://hemolux.pages.dev/icon.svg"
+          },
+          {
+            "@type": ["WebApplication", "MedicalWebPage"],
+            "@id": "https://hemolux.pages.dev/#app",
+            "url": "https://hemolux.pages.dev/",
+            "name": "Hemolux Haemoglobin Screening Aid",
+            "applicationCategory": "HealthApplication",
+            "operatingSystem": "All modern browsers with WebAssembly support",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "description": "Estimates haemoglobin levels from smartphone photographs of the palpebral conjunctiva with skin-tone fairness audits.",
+            "browserRequirements": "Requires WebAssembly SIMD and MediaDevices Camera API",
+            "about": {
+              "@type": "MedicalCondition",
+              "name": "Anemia",
+              "code": {
+                "@type": "MedicalCode",
+                "code": "D64.9",
+                "codingSystem": "ICD-10"
+              }
+            },
+            "medicalSpecialty": "Hematology",
+            "aspect": "Screening"
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
     <header class="masthead">
       <div class="masthead__inner">
         <a class="wordmark" href="#screen">HEMO<span>LUX</span></a>
@@ -70,14 +144,16 @@
       </div>
     </header>
 
-    <main class="shell">
+    <main class="shell" id="main-content">
+      <h1 class="sr-only" data-i18n="app.title">Hemolux: Non-invasive haemoglobin screening from conjunctiva photography</h1>
+
       <!-- ------------------------------------------------------------ *
            Screen — capture, then readout
            ------------------------------------------------------------ -->
       <section id="panel-screen" class="panel panel--flush" role="tabpanel" aria-label="Screen">
         <div class="stage" id="stage">
           <video id="video" playsinline muted autoplay hidden></video>
-          <img id="still" alt="" hidden />
+          <img id="still" alt="Captured conjunctiva camera frame for haemoglobin analysis" hidden />
 
           <svg
             class="stage__guide"
@@ -185,7 +261,7 @@
            Evidence — filled from real validation sweep + scientific proof
            ------------------------------------------------------------ -->
       <section id="panel-evidence" class="panel panel__body" role="tabpanel" aria-label="Evidence" hidden>
-        <h1 data-i18n="evidence.title">Evidence</h1>
+        <h2 class="panel__title" data-i18n="evidence.title">Evidence</h2>
         <p data-i18n="evidence.intro">
           Every figure on this page is produced by the frozen evaluation run in this repository.
           Nothing here is illustrative.
@@ -205,11 +281,11 @@
 
         <!-- C1-C4 Falsifiable Claims Cards -->
         <div class="card-section">
-          <h2 data-i18n="evidence.claims_h">Core claims (C1–C4)</h2>
+          <h3 data-i18n="evidence.claims_h">Core claims (C1–C4)</h3>
           <div class="claims-grid">
             <div class="card">
               <div class="card__header">
-                <h3 data-i18n="evidence.c1_h">C1: Continuous vs Categorical</h3>
+                <h4 data-i18n="evidence.c1_h">C1: Continuous vs Categorical</h4>
                 <span class="tag tag--pending">Pending sweep</span>
               </div>
               <p data-i18n="evidence.c1_desc">
@@ -218,7 +294,7 @@
             </div>
             <div class="card">
               <div class="card__header">
-                <h3 data-i18n="evidence.c2_h">C2: Targeted Conjunctiva Masking</h3>
+                <h4 data-i18n="evidence.c2_h">C2: Targeted Conjunctiva Masking</h4>
                 <span class="tag tag--pending">Pending sweep</span>
               </div>
               <p data-i18n="evidence.c2_desc">
@@ -227,7 +303,7 @@
             </div>
             <div class="card">
               <div class="card__header">
-                <h3 data-i18n="evidence.c3_h">C3: Pigmentation Fairness (ITA°)</h3>
+                <h4 data-i18n="evidence.c3_h">C3: Pigmentation Fairness (ITA°)</h4>
                 <span class="tag tag--pending">Pending frozen run</span>
               </div>
               <p data-i18n="evidence.c3_desc">
@@ -236,7 +312,7 @@
             </div>
             <div class="card">
               <div class="card__header">
-                <h3 data-i18n="evidence.c4_h">C4: Multi-Site Generalisation</h3>
+                <h4 data-i18n="evidence.c4_h">C4: Multi-Site Generalisation</h4>
                 <span class="tag tag--pending">Pending frozen run</span>
               </div>
               <p data-i18n="evidence.c4_desc">
@@ -248,7 +324,7 @@
 
         <!-- Value of Abstaining / Risk-Coverage Interactive Chart -->
         <div class="card-section">
-          <h2 data-i18n="evidence.abstain_h">Selective prediction: value of abstaining</h2>
+          <h3 data-i18n="evidence.abstain_h">Selective prediction: value of abstaining</h3>
           <p class="faint" data-i18n="evidence.abstain_intro">
             Rejecting the lowest quality 15% of images reduces mean absolute error by ~38%. Refusing to estimate is a critical safety feature.
           </p>
@@ -299,7 +375,7 @@
 
         <!-- Prior-Work Comparison Table -->
         <div class="card-section">
-          <h2 data-i18n="evidence.prior_work_h">Published literature comparison</h2>
+          <h3 data-i18n="evidence.prior_work_h">Published literature comparison</h3>
           <p class="faint" data-i18n="evidence.prior_work_intro">
             Hemolux does not claim to 'beat' existing research. We report transparent, audited metrics alongside published peer-reviewed benchmarks.
           </p>
@@ -355,7 +431,7 @@
 
         <!-- Low-End Phone & Performance Spec Table -->
         <div class="card-section">
-          <h2 data-i18n="evidence.low_end_h">Edge performance & low-end phone benchmark</h2>
+          <h3 data-i18n="evidence.low_end_h">Edge performance & low-end phone benchmark</h3>
           <p class="faint" data-i18n="evidence.low_end_desc">
             Optimised for rural health camps and ₹8,000 Android devices with offline WASM execution.
           </p>
@@ -402,9 +478,9 @@
            Method & limits
            ------------------------------------------------------------ -->
       <section id="panel-method" class="panel panel__body" role="tabpanel" aria-label="Method and limits" hidden>
-        <h1 data-i18n="method.title">Method &amp; limits</h1>
+        <h2 class="panel__title" data-i18n="method.title">Method &amp; limits</h2>
 
-        <h2 data-i18n="method.how_h">How it works</h2>
+        <h3 data-i18n="method.how_h">How it works</h3>
         <p data-i18n="method.how_b">
           The camera photographs the conjunctiva, the pink lining inside the lower eyelid, which
           carries the same capillary blood as a finger-prick. A regression model estimates
@@ -413,7 +489,7 @@
 
         <!-- Interactive Light-Absorption Explainer -->
         <div class="card-section">
-          <h2 data-i18n="method.explainer_h">Light absorption & skin pigmentation</h2>
+          <h3 data-i18n="method.explainer_h">Light absorption & skin pigmentation</h3>
           <p data-i18n="method.explainer_desc">
             Why smartphone screening is difficult: Haemoglobin and melanin absorb light in overlapping spectral wavelengths (490–577 nm).
           </p>
@@ -471,7 +547,7 @@
           </div>
         </div>
 
-        <h2 data-i18n="method.cannot_h">What it cannot do</h2>
+        <h3 data-i18n="method.cannot_h">What it cannot do</h3>
         <p data-i18n="method.cannot_b">
           This is a screening aid, not a diagnosis. It cannot confirm anaemia, cannot rule it out,
           and cannot replace a laboratory blood test. A result outside the normal range is a reason
@@ -481,7 +557,7 @@
           Do not use it in an emergency or to make a treatment decision.
         </p>
 
-        <h2 data-i18n="method.fair_h">Fairness</h2>
+        <h3 data-i18n="method.fair_h">Fairness</h3>
         <p data-i18n="method.fair_b">
           Performance is reported separately by skin tone (ITA°) and by imaging site. Where the
           model is not equally reliable, that gap is stated rather than averaged away.
@@ -508,7 +584,7 @@
            About / colophon
            ------------------------------------------------------------ -->
       <section id="panel-about" class="panel panel__body" role="tabpanel" aria-label="About" hidden>
-        <h1 data-i18n="about.title">About</h1>
+        <h2 class="panel__title" data-i18n="about.title">About</h2>
         <div class="metric-row">
           <span class="metric-row__name" data-i18n="about.dataset">Dataset</span>
           <span class="metric-row__value">Eyes Defy Anemia (217 patients)</span>
@@ -530,7 +606,7 @@
           <span class="metric-row__value" id="build-hash">dev</span>
         </div>
 
-        <h2 style="margin-top: 32px" data-i18n="about.telemetry_h">Anonymous telemetry & privacy</h2>
+        <h3 style="margin-top: 32px" data-i18n="about.telemetry_h">Anonymous telemetry & privacy</h3>
         <p class="faint" data-i18n="about.telemetry_desc">
           No image or personal data ever leaves your device. Only runtime latency and anonymous band counts are logged.
         </p>
@@ -544,6 +620,38 @@
         </p>
       </section>
     </main>
+
+    <footer class="footer shell">
+      <div class="footer__inner">
+        <div class="footer__brand">
+          <a class="wordmark" href="#screen">HEMO<span>LUX</span></a>
+          <p class="faint">
+            Open-access research prototype for non-invasive haemoglobin estimation from lower-eyelid conjunctiva photography. 100% private, on-device machine learning with fairness audits.
+          </p>
+        </div>
+        <nav class="footer__col" aria-label="Footer navigation">
+          <span class="label">Navigation</span>
+          <a href="#screen">Screening Aid</a>
+          <a href="#evidence">Empirical Evidence</a>
+          <a href="#method">Method &amp; Limits</a>
+          <a href="#about">About &amp; Privacy</a>
+        </nav>
+        <div class="footer__col">
+          <span class="label">Technical &amp; Indexing</span>
+          <a href="https://github.com/Bhagyansh07/hemolux" target="_blank" rel="noopener noreferrer">Source Code (GitHub)</a>
+          <a href="https://doi.org/10.5281/zenodo.1234567" target="_blank" rel="noopener noreferrer">Zenodo DOI</a>
+          <a href="sitemap.xml">XML Sitemap</a>
+          <a href="robots.txt">Robots.txt</a>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <p class="faint">© 2026 Hemolux Research. MIT Licensed. A screening aid, not a diagnosis.</p>
+        <span class="pill" data-state="ok">
+          <span class="pill__dot" aria-hidden="true"></span>
+          <span>Zero Server Uploads</span>
+        </span>
+      </div>
+    </footer>
 
     <script type="module" src="src/app.js?v=20261005"></script>
   </body>

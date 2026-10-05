@@ -45,6 +45,14 @@ hemolux = "hemolux.cli:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/hemolux"]
 
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/artifacts",
+    "/brain",
+    "/data",
+    "/.venv",
+]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"

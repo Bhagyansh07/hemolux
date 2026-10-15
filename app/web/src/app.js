@@ -447,8 +447,8 @@ function renderResult(out) {
 
   // Fairness Audit Badge
   const auditBadge = document.createElement("div");
-  auditBadge.className = "audit-badge";
-  auditBadge.innerHTML = `<span aria-hidden="true">&#10003;</span> <span>${t("screen.audit_badge_title")}: ${t("screen.audit_badge_supported")}</span>`;
+  auditBadge.className = "audit-badge audit-badge--pending";
+  auditBadge.innerHTML = `<span aria-hidden="true">&#9675;</span> <span>${t("screen.audit_badge_title")}: ${t("screen.audit_badge_pending")}</span>`;
 
   // "Kya measure hua" (What was measured) panel
   const rect = roiToRect(ROI, frameCanvas.width, frameCanvas.height);

@@ -961,7 +961,8 @@ a {
   background: rgba(61, 220, 151, 0.1);
 }
 
-.audit-badge--underpowered {
+.audit-badge--underpowered,
+.audit-badge--pending {
   border-color: var(--warn);
   color: var(--warn);
   background: rgba(255, 184, 77, 0.1);

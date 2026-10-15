@@ -9,7 +9,7 @@ export const MESSAGES = {
     "app.badge": "Clinical Research Aid",
     "app.title": "Non-Invasive Haemoglobin Screening",
     "app.desc":
-      "Estimates haemoglobin from a photograph of the lower-eyelid conjunctiva. 100% on-device AI screening with skin-tone and lighting fairness audits.",
+      "Estimates haemoglobin from a photograph of the lower-eyelid conjunctiva. 100% on-device AI screening; skin-tone and lighting fairness audits pending until measured.",
     "tag.research": "Research prototype",
     "nav.screen": "Screen",
     "nav.evidence": "Evidence",
@@ -134,6 +134,7 @@ export const MESSAGES = {
     "screen.audit_badge_title": "Fairness audit",
     "screen.audit_badge_supported": "Subgroup calibrated",
     "screen.audit_badge_underpowered": "Underpowered subgroup (ITA < 10°)",
+    "screen.audit_badge_pending": "Pending frozen run",
     "screen.stress_exposure": "Exposure offset",
     "screen.stress_wb": "White-balance temperature",
     "screen.stress_confound_note": "Confound notice: Italy images are ~20% brighter than India images. Notice how exposure moves the colorimetric estimate.",
@@ -167,7 +168,7 @@ export const MESSAGES = {
     "app.badge": "नैदानिक शोध सहायता",
     "app.title": "गैर-आक्रामक हीमोग्लोबिन स्क्रीनिंग",
     "app.desc":
-      "निचली पलक की कंजंक्टिवा फ़ोटो से हीमोग्लोबिन अनुमान। 100% ऑन-डिवाइस व त्वचा-रंग व प्रकाश निष्पक्षता ऑडिट सहित।",
+      "निचली पलक की कंजंक्टिवा फ़ोटो से हीमोग्लोबिन अनुमान। 100% ऑन-डिवाइस व त्वचा-रंग व प्रकाश निष्पक्षता ऑडिट मापे जाने तक प्रतीक्षित।",
     "tag.research": "रिसर्च प्रोटोटाइप",
     "nav.screen": "जाँच",
     "nav.evidence": "प्रमाण",
@@ -292,6 +293,7 @@ export const MESSAGES = {
     "screen.audit_badge_title": "निष्पक्षता ऑडिट",
     "screen.audit_badge_supported": "सबग्रुप कैलिब्रेटेड",
     "screen.audit_badge_underpowered": "सीमित डेटा (ITA < 10°)",
+    "screen.audit_badge_pending": "फ़्रीज़ रन प्रतीक्षित",
     "screen.stress_exposure": "एक्सपोजर अंतर",
     "screen.stress_wb": "व्हाइट-बैलेंस तापमान",
     "screen.stress_confound_note": "कॉन्फ़ाउंड सूचना: इटली की तस्वीरें भारत की तुलना में ~20% अधिक चमकदार हैं। देखें कि एक्सपोज़र से अनुमान कैसे बदलता है।",

@@ -3,8 +3,8 @@
   "description": "Hemolux is an edge-native, zero-cloud non-invasive conjunctival pallor screening system engineered for low-resource smartphone environments. It features an ordinal regression architecture, calibrated selective prediction (abstaining under adverse optical conditions), and comprehensive fairness auditing across skin phototypes (Individual Typology Angle).",
   "creators": [
     {
-      "name": "Hemolux Open Science Collaboration",
-      "affiliation": "Hemolux Project"
+      "name": "Chandel, Bhagyansh",
+      "affiliation": "Independent researcher"
     }
   ],
   "license": "MIT",

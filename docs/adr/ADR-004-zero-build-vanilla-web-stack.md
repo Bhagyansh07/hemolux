@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-02
-- **Deciders:** Core Engineering Team
+- **Deciders:** Bhagyansh Chandel
 
 ---
 

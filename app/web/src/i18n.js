@@ -139,7 +139,7 @@ export const MESSAGES = {
     "screen.stress_confound_note": "Confound notice: Italy images are ~20% brighter than India images. Notice how exposure moves the colorimetric estimate.",
 
     "evidence.abstain_h": "Selective prediction: value of abstaining",
-    "evidence.abstain_intro": "Rejecting the lowest quality 15% of images reduces mean absolute error by ~38%. Refusing to estimate is a critical safety feature.",
+    "evidence.abstain_intro": "Refusing to estimate when the photograph is poor is a safety behaviour, not an accuracy claim. In the first frozen run, rejecting the lowest-confidence images did not reduce mean absolute error (ordinal MAE 2.16 g/dL at full coverage rose to 2.26 at 25% coverage), so the gate is shipped for safety only.",
     "evidence.claims_h": "Core claims (C1–C4)",
     "evidence.c1_h": "C1: Continuous vs Categorical",
     "evidence.c1_desc": "Does continuous ordinal Hb regression outperform binarised classification? (Pending validation sweep)",
@@ -297,7 +297,7 @@ export const MESSAGES = {
     "screen.stress_confound_note": "कॉन्फ़ाउंड सूचना: इटली की तस्वीरें भारत की तुलना में ~20% अधिक चमकदार हैं। देखें कि एक्सपोज़र से अनुमान कैसे बदलता है।",
 
     "evidence.abstain_h": "चयनात्मक अनुमान: अस्वीकार करने का मूल्य",
-    "evidence.abstain_intro": "खराब गुणवत्ता वाली 15% तस्वीरों को अस्वीकार करने से औसत त्रुटि (MAE) ~38% कम हो जाती है। अनुमान न लगाना एक सुरक्षा फ़ीचर है।",
+    "evidence.abstain_intro": "जब तस्वीर खराब हो तो अनुमान न लगाना एक सुरक्षा व्यवहार है, सटीकता का दावा नहीं। पहले फ़्रोज़न रन में, सबसे कम भरोसे वाली तस्वीरों को अस्वीकार करने से औसत निरपेक्ष त्रुटि (MAE) कम नहीं हुई (ऑर्डिनल MAE पूर्ण कवरेज पर 2.16 g/dL से 25% कवरेज पर 2.26 हो गई), इसलिए यह गेट केवल सुरक्षा के लिए रखा गया है।",
     "evidence.claims_h": "मुख्य परिकल्पनाएँ (C1–C4)",
     "evidence.c1_h": "C1: निरंतर बनाम श्रेणीबद्ध",
     "evidence.c1_desc": "क्या निरंतर ऑर्डिनल रिग्रेशन बाइनरी से बेहतर है? (स्वीप परिणाम प्रतीक्षित)",

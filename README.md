@@ -8,14 +8,14 @@
 [![Edge AI](https://img.shields.io/badge/inference-WASM%20%7C%20ONNX%20Web-orange)](app/web/)
 
 > **Live Client:** [https://hemolux.pages.dev](https://hemolux.pages.dev)  
-> **Key Docs:** [ADRs (Design Decisions)](docs/adr/ADR-001-ordinal-regression-head.md) | [Model Card](docs/MODEL_CARD.md) | [Data Card](docs/DATA_CARD.md) | [Validation Plan](docs/VALIDATION_PLAN.md) | [Interview Cheat Sheet](docs/INTERVIEW_CHEAT_SHEET.md) | [Kaggle Audit](notebooks/hemolux_fairness_audit.ipynb)
+> **Key Docs:** [ADRs (Design Decisions)](docs/adr/ADR-001-ordinal-regression-head.md) | [Model Card](docs/MODEL_CARD.md) | [Data Card](docs/DATA_CARD.md) | [Evaluations](EVALS.md) | [Validation Plan](docs/VALIDATION_PLAN.md) | [Fairness audit walkthrough (synthetic)](notebooks/hemolux_fairness_audit.ipynb)
 
 ---
 
 ### What I Built (The 6-Second Summary)
 - **Edge-Native Clinical Screening:** A non-invasive hemoglobin estimation engine running a 4.2 MB ONNX model via WebAssembly inside smartphone browsers (~115 ms on an ₹8,000 Android phone) with **zero cloud image transmission**.
-- **Fairness-First Optical Architecture:** Audited and neutralized a **~20% ambient illumination confound** between European and Indian benchmark cohorts; automated fairness gate (`hemolux eval`) blocks releases with skin phototype bias ($|m| \ge 0.02\text{ g/dL/}^\circ\text{ITA}$).
-- **Selective Prediction / Abstention:** Treats "refusing to predict" as an essential medical feature: rejecting the bottom 15% degraded acquisitions drops screening error by **~38%**.
+- **Fairness-First Optical Architecture:** Audited and disclosed a **~20% ambient illumination confound** between the European and Indian benchmark cohorts; an automated fairness gate (`hemolux eval`) is set to flag skin-phototype bias at $|m| \ge 0.002\text{ g/dL/}^\circ\text{ITA}$ (a gate, not a passed result).
+- **Selective Prediction / Abstention:** Treats "refusing to predict" as a safety behaviour when the photograph is poor. On the first frozen run abstention did **not** reduce error (ordinal MAE 2.16 g/dL at full coverage rose to 2.26 at 25% coverage), so it ships as a safety gate, not as an accuracy claim.
 
 ---
 
@@ -37,10 +37,11 @@ make treatment decisions.** See [ETHICS.md](ETHICS.md).
 The measurement, evaluation and training library is complete and tested, and it
 exports an ONNX graph checked against PyTorch. The web front end runs that graph
 on-device through `onnxruntime-web`, so no photograph leaves the phone, and the
-two edge Workers that record a screening are in this tree too. The measured
-results are not published yet: the validation sweep runs over the real corpus
-before anything claims a number, which is why [EVALS.md](EVALS.md) is still a
-stub.
+two edge Workers that record a screening are in this tree too. A first frozen run
+is committed (`artifacts/reports/results.json`); its numbers are poor and are
+reported as measured in [EVALS.md](EVALS.md) and the
+[model card](docs/MODEL_CARD.md). It is a single seed on 43 held-out patients, so
+it is a starting measurement rather than a result.
 
 | Component | State |
 | --- | --- |
@@ -67,7 +68,7 @@ stub.
 | Web front end, on-device inference, offline shell | implemented, 25 tests |
 | Telemetry and feedback Workers, D1 schema | implemented, 11 tests |
 | Deploy pipeline (Cloudflare Pages, no build step) | scripted; [docs/DEPLOY.md](docs/DEPLOY.md) |
-| Measured results | not yet published; [EVALS.md](EVALS.md) is a stub |
+| Measured results | first frozen run committed; MAE ≈ 2.1–2.5 g/dL, R² ≈ 0 or negative — see [EVALS.md](EVALS.md) |
 
 907 tests, all passing, `ruff check .` clean.
 
@@ -168,7 +169,7 @@ src/hemolux/
   provenance.py          what a tracked results file must record about its run
   sweep.py               configuration selection on validation, test read once
   export.py              ONNX graph assembly, and the check against PyTorch
-  cli.py                 the six subcommands
+  cli.py                 the seven subcommands
   data/
     dataset.py           workbook and mask discovery, preprocessing spec
     splits.py            patient-disjoint folds, site holdout, leakage guards
@@ -198,7 +199,7 @@ scripts/
   build_site.mjs            stages the model and reports into the site
   vendor_runtime.mjs        copies onnxruntime-web in, so no CDN is called
 docs/DEPLOY.md               the free deploy path, end to end
-tests/                      899 tests
+tests/                      907 tests
 ```
 
 ## Dataset

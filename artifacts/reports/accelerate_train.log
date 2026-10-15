@@ -1,7 +1,7 @@
 [14:53:16] waiting for the deep/palpebral feature cache
 [14:53:42] waiting for the deep/palpebral feature cache
 [15:13:33] ready: features_mobilenetv3_small_100_palpebral_deep_1024d.npz
-[15:13:33] $ train --data-root C:\Users\bhagy\Desktop\PROJECTS\Project 1\data\raw\eyes-defy-anemia\dataset anemia
+[15:13:33] $ train --data-root data\raw\eyes-defy-anemia\dataset anemia
 [15:13:49]   rc=0
 [15:13:49]   --- stdout ---
 [15:13:49]   using cached features: features_mobilenetv3_small_100_palpebral_deep_1024d.npz
@@ -110,9 +110,9 @@
 [15:13:49]   ordinal    Italy->India        95   3.151   3.641  -2.110   2.999   0.16   0.32    11.47
 [15:13:49]   
 [15:13:49]     building the results file
-[15:13:49]     wrote C:\Users\bhagy\Desktop\PROJECTS\Project 1\artifacts\reports\results.json
-[15:13:49]     wrote C:\Users\bhagy\Desktop\PROJECTS\Project 1\artifacts\reports\results.csv
-[15:13:49]     wrote C:\Users\bhagy\Desktop\PROJECTS\Project 1\artifacts\reports\predictions.csv
+[15:13:49]     wrote artifacts\reports\results.json
+[15:13:49]     wrote artifacts\reports\results.csv
+[15:13:49]     wrote artifacts\reports\predictions.csv
 [15:13:49]   
 [15:13:49]     best head by test R2: binary (R2 0.048, MAE 2.142 g/dL)
 [15:13:49]     Erythema index 2016 R2=0.27 (forniceal only 0.09); smartphone HHR 2021 R2=0.372; MobileNetV3+SE 2022 R2=0.512 / MAE 1.521; Mask R-CNN 2023 R2=0.503 vs 0.306 unsegmented; Hemo-ConViT 2025 MAE 0.870, R2 0.761. Clinical acceptability target: +/-1.0 g/dL.
@@ -124,7 +124,7 @@
 [15:14:01]   [backbone] mobilenetv3_small_100 reports num_features=576 but emits 1024; using the measured value.
 [15:14:01]   [backbone] mobilenetv3_small_100 + ordinal: unfroze 0/6 stages = 0/1,517,856 backbone params (0.0%, requested 0.0%)
 [15:14:01]   
-[15:14:01]     wrote C:\Users\bhagy\Desktop\PROJECTS\Project 1\artifacts\models\hemolux_screen_224.onnx
+[15:14:01]     wrote artifacts\models\hemolux_screen_224.onnx
 [15:14:01]       5.83 MB
 [15:14:01]   
 [15:14:01]     ONNX vs PyTorch on identical input:
@@ -132,10 +132,10 @@
 [15:14:01]       sigma max |diff|: 2.146e-06 g/dL
 [15:14:01]       verified
 [15:14:01]   
-[15:14:01]     wrote C:\Users\bhagy\Desktop\PROJECTS\Project 1\artifacts\models\hemolux_screen_224.json
+[15:14:01]     wrote artifacts\models\hemolux_screen_224.json
 [15:14:01]       model_id mobilenetv3_small_100-ordinal-palpebral
 [15:14:01]       validated: residual sigma 2.490 g/dL
 [15:14:01]   --- stderr ---
-[15:14:01]   C:\Users\bhagy\Desktop\PROJECTS\Project 1\src\hemolux\export.py:64: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
+[15:14:01]   src\hemolux\export.py:64: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
 [15:14:01]     if x.shape[-1] != self.size or x.shape[-2] != self.size:
 [15:14:01] accelerated train/export finished

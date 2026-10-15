@@ -13,6 +13,16 @@ is ignored and no crop from it is committed anywhere in the history.
 derived from it.** That check is a prerequisite for any release from this
 project, and it is not something this repository can do on the author's behalf.
 
+## Licence
+
+The repository's MIT `LICENSE` covers the **source code only**.
+
+It does not cover the Eyes Defy Anemia dataset, which is not redistributed
+here. The dataset contains identifiable body images and clinical laboratory
+values, is obtained separately from its authors, and is governed by its own
+terms — the same terms the paragraph above says to confirm before publishing
+anything derived from it.
+
 ## Layout on disk
 
 ```

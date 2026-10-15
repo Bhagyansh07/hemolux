@@ -60,6 +60,9 @@ worker-configuration.d.ts
 # --- notebooks: strip checkpoints, keep the .ipynb ---
 .ipynb_checkpoints/
 
+# --- local agent / tooling logs ---
+.copilot-cockpit-logs/
+
 # --- editors / os ---
 .vscode/
 .idea/
@@ -88,4 +91,12 @@ artifacts/reports/predictions.csv
 # self-consistent, not to be read by anyone else, and a public repository has
 # no reason to carry it.
 brain/
+
+# Personal career material. These three are interview preparation and job
+# application artifacts: they are written for a reader who is hiring, not a
+# reader who is using the software, and one of them quotes figures this
+# project never measured. They live outside the published history.
+docs/INTERVIEW_CHEAT_SHEET.md
+docs/PORTFOLIO_CASE_STUDY.md
+docs/TECHNICAL_WRITEUP.md
 

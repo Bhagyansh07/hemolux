@@ -2,14 +2,13 @@ cff-version: 1.2.0
 message: "If you use Hemolux in your research or clinical benchmarking, please cite it using the metadata from this file."
 title: "Hemolux: Non-Invasive Conjunctival Pallor Screening with Fairness-Audited Selective Prediction"
 version: "0.1.0-alpha"
-date-released: 2024-10-05
 license: "MIT"
 repository-code: "https://github.com/Bhagyansh07/hemolux"
 url: "https://hemolux.pages.dev"
 authors:
-  - family-names: "Research Team"
-    given-names: "Hemolux"
-    affiliation: "Hemolux Open Science Collaboration"
+  - family-names: "Chandel"
+    given-names: "Bhagyansh"
+    affiliation: "Independent researcher"
 keywords:
   - "anaemia screening"
   - "conjunctival pallor"

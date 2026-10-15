@@ -8,12 +8,12 @@ Following the framework proposed by Mitchell et al. (*Model Cards for Model Repo
 
 - **Model Name:** Hemolux MobileNetV3-Small Ordinal Regression Head
 - **Version:** `0.1.0-alpha`
-- **Release Date:** October 2024
+- **Release Date:** Unreleased (`0.1.0-alpha`)
 - **Model Type:** Deep feature representation (MobileNetV3-Small, ImageNet pretrained, frozen) with Ordinal Logistic Regression classification / continuous threshold head.
 - **Model Size:** 4.2 MB (Quantized/Float32 ONNX graph)
 - **Target Runtime:** Client-side WebAssembly via ONNX Runtime Web (`ort.min.js`), running 100% locally on smartphone browsers (e.g., Chrome on Android ₹8,000 devices).
 - **License:** MIT License
-- **Maintainers / Authors:** Hemolux Research & Engineering Team
+- **Maintainers / Authors:** Bhagyansh Chandel (independent researcher)
 
 ---
 
@@ -56,8 +56,38 @@ Evaluated in accordance with clinical hematology screening standards and algorit
 | **Bland-Altman 95% LoA** | $\pm 1.80\text{ g/dL}$ | Limits of agreement vs venous laboratory standard. |
 | **Brier Score (Ordinal)** | $\le 0.18$ | Proper scoring rule assessing probabilistic calibration. |
 | **Expected Calibration Error (ECE)** | $\le 0.08$ | Alignment between predicted confidence and true empirical accuracy. |
-| **Fairness Slope ($d\text{Bias}/d\text{ITA}$)** | $|m| \le 0.02\text{ g/dL per }^\circ\text{ITA}$ | Rate of prediction error shift across skin tone spectrum. |
-| **Selective Risk Reduction** | $> 30\%$ error reduction | Reduction in Mean Absolute Error (MAE) when abstaining on bottom 15% confidence cases. |
+| **Fairness Slope ($d\text{Bias}/d\text{ITA}$)** | $|m| \le 0.002\text{ g/dL per }^\circ\text{ITA}$ | Rate of prediction error shift across skin tone spectrum. This is the live `fairness_gate` threshold (`min_abs_slope=0.002`). |
+| **Selective Risk Reduction** | $> 30\%$ error reduction | Reduction in Mean Absolute Error (MAE) when abstaining on bottom 15% confidence cases. **Not achieved on the measured run — see below.** |
+
+### Measured results (first frozen run, single seed)
+
+Recorded because the rows above are *targets*, and the gap between a target and a
+measurement is the thing a model card exists to expose. Source:
+`artifacts/reports/results.json` (one seed, 43 held-out patients, patient-disjoint
+split).
+
+| Head | MAE (g/dL) | RMSE | R² |
+|---|---|---|---|
+| binary | 2.142 | 2.493 | 0.048 |
+| regression | 2.139 | 2.607 | −0.042 |
+| ordinal | 2.156 | 2.538 | 0.013 |
+| multitask | 2.158 | 2.544 | 0.009 |
+| severity | 2.458 | 2.804 | −0.205 |
+
+Every head lands at MAE ≈ 2.1–2.5 g/dL, roughly double the ~1.0 g/dL
+point-of-care acceptability band, and R² is at or below zero for every head but
+the binary one. On this corpus the model explains essentially none of the
+between-patient haemoglobin variance. The `|m| ≤ 0.002` fairness row above is a
+gate the release must pass, not a measured result, and it has not been shown to
+pass on this run.
+
+**The abstention feature did not reduce error on the measured corpus.** The
+risk-coverage curve for the ordinal head runs from MAE 2.156 at full coverage to
+2.264 at 25% coverage: rejecting the least-confident acquisitions *increased*
+error rather than lowering it. The abstention gate is justified as a safety
+behaviour — refuse to guess when the image is poor — not as an accuracy
+improvement, and no accuracy-improvement claim is attached to it until a curve
+shows one.
 
 ---
 

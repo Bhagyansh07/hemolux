@@ -77,7 +77,7 @@ Following FDA guidance for optical physiological sensors (e.g., pulse oximeters)
 3. **Fairness Gate:**
    - Linear regression of bias against skin tone:
    $$\text{Bias} = m \cdot \text{ITA}^\circ + c$$
-   - Protocol pass criterion: $|m| < 0.02\text{ g/dL per }^\circ\text{ITA}$ with $p > 0.05$ (no statistically significant racial/pigmentation disparity).
+   - Protocol pass criterion: $|m| < 0.002\text{ g/dL per }^\circ\text{ITA}$ with $p > 0.05$ (no statistically significant racial/pigmentation disparity). This is the same `min_abs_slope` the live `fairness_gate` uses.
 
 ---
 

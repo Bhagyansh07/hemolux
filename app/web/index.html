@@ -9,10 +9,9 @@
       content="Hemolux estimates haemoglobin levels from smartphone photos of the palpebral conjunctiva. Open-access, on-device AI screening aid with skin-tone fairness audits."
     />
     <meta name="keywords" content="haemoglobin screening, anemia screening, conjunctiva, non-invasive hemoglobin, digital health, medical AI, on-device screening" />
-    <meta name="author" content="Hemolux Research" />
+    <meta name="author" content="Bhagyansh Chandel" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-    <meta name="google-site-verification" content="GOOGLE_SEARCH_CONSOLE_VERIFICATION_TOKEN" />
 
     <link rel="canonical" href="https://hemolux.pages.dev/" />
 
@@ -75,7 +74,7 @@
           {
             "@type": "Organization",
             "@id": "https://hemolux.pages.dev/#organization",
-            "name": "Hemolux Research",
+            "name": "Hemolux",
             "url": "https://hemolux.pages.dev/",
             "logo": "https://hemolux.pages.dev/icon.svg"
           },
@@ -337,7 +336,7 @@
         <div class="card-section">
           <h3 data-i18n="evidence.abstain_h">Selective prediction: value of abstaining</h3>
           <p class="faint" data-i18n="evidence.abstain_intro">
-            Rejecting the lowest quality 15% of images reduces mean absolute error by ~38%. Refusing to estimate is a critical safety feature.
+            Refusing to estimate when the photograph is poor is a safety behaviour, not an accuracy claim. In the first frozen run, rejecting the lowest-confidence images did not reduce mean absolute error (ordinal MAE 2.16 g/dL at full coverage rose to 2.26 at 25% coverage), so the gate is shipped for safety only.
           </p>
           <div class="chart-box" id="abstain-chart-box">
             <svg class="chart-svg" viewBox="0 0 540 220" aria-label="Risk-coverage curve">
@@ -650,13 +649,12 @@
         <div class="footer__col">
           <span class="label">Technical &amp; Indexing</span>
           <a href="https://github.com/Bhagyansh07/hemolux" target="_blank" rel="noopener noreferrer">Source Code (GitHub)</a>
-          <a href="https://doi.org/10.5281/zenodo.1234567" target="_blank" rel="noopener noreferrer">Zenodo DOI</a>
           <a href="sitemap.xml">XML Sitemap</a>
           <a href="robots.txt">Robots.txt</a>
         </div>
       </div>
       <div class="footer__bottom">
-        <p class="faint">© 2026 Hemolux Research. MIT Licensed. A screening aid, not a diagnosis.</p>
+        <p class="faint">© 2026 Bhagyansh Chandel. MIT Licensed. A screening aid, not a diagnosis.</p>
         <span class="pill" data-state="ok">
           <span class="pill__dot" aria-hidden="true"></span>
           <span>Zero Server Uploads</span>

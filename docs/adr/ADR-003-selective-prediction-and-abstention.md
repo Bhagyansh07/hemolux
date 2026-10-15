@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-02
-- **Deciders:** Core Engineering Team
+- **Deciders:** Bhagyansh Chandel
 
 ---
 
@@ -32,19 +32,30 @@ We make **Abstention a first-class operational feature** through a two-stage gat
 
 ## Empirical Rationale (Risk-Coverage Analysis)
 
-Using `hemolux.metrics.calibration.risk_coverage_curve`, we sweep coverage from 100% down to 60%:
+Using `hemolux.metrics.calibration.risk_coverage_curve`, coverage can be swept
+from 100% downward. **On the first frozen run this did not improve accuracy:**
 
-| Operational Mode | Image Acceptance Rate | Mean Absolute Error (MAE) | Clinical Error Reduction |
-| --- | --- | --- | --- |
-| **Naive (No Abstain)** | 100% | 2.14 g/dL | Baseline |
-| **Quality Gate Only** | 92% | 1.84 g/dL | -14.0% |
-| **Quality + Uncertainty Gate** | **85%** | **1.33 g/dL** | **-37.8%** |
-| **Strict High-Confidence Gate** | 70% | 1.08 g/dL | -49.5% |
+| Operational Mode | Image Acceptance Rate | Mean Absolute Error (MAE) |
+| --- | --- | --- |
+| Full coverage (no abstain) | 100% | 2.16 g/dL |
+| Abstain on the least-confident images | 25% | 2.26 g/dL |
+
+Rejecting the least-confident acquisitions *raised* error on the measured corpus
+rather than lowering it, and `risk_coverage_curve` is written so a noise signal
+scores no better than a real one (see `tests/test_calibration.py`). The abstention
+gate is therefore justified here as a safety behaviour — do not return a number
+when the photograph cannot support one — and **not** as an accuracy improvement.
+No accuracy-improvement figure is claimed.
 
 ### Key Clinical Insights:
-1. **Refusing to guess drops clinical error by nearly 38%** while still providing actionable triage for 85 out of 100 individuals.
-2. The remaining 15% of patients are not "failed"; they are immediately prompted to retake under daylight or directed to standard lab evaluation.
-3. In point-of-care screening, a false negative (missing moderate/severe anaemia) carries severe morbidity risks; abstention eliminates erratic false negatives caused by optical degradation.
+1. Returning a point estimate for an unmeasurable image is a hazard regardless of
+   what it does to the aggregate error, so the gate stays even though it is not an
+   accuracy win.
+2. The abstained cases are not "failed"; they are prompted to retake under
+   daylight or directed to standard lab evaluation.
+3. In point-of-care screening, a false negative (missing moderate/severe anaemia)
+   carries severe morbidity risks; abstaining removes erratic false negatives
+   caused by optical degradation.
 
 ---
 

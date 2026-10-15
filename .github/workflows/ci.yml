@@ -21,6 +21,13 @@ jobs:
     name: lint and test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
 
+    # The six-hour default is the ceiling here, not a budget. A job that hangs
+    # -- an interactive prompt, a file lock, a runner that never schedules --
+    # would otherwise occupy a machine for six hours before anyone noticed.
+    # The slowest run of this job observed so far is ~5 minutes, so 30 leaves
+    # headroom for a cold pip cache without tolerating a hang.
+    timeout-minutes: 30
+
     # Python 3.13 is the only interpreter this pipeline is verified against.
     # pyproject declares >=3.11 and the package is written to 3.11 syntax, but
     # claiming 3.11 and 3.12 here would be an untested claim, and an untested
@@ -88,6 +95,10 @@ jobs:
     name: build
     runs-on: ubuntu-latest
     needs: check
+    # Build, then read every path out of the wheel and sdist. Observed under a
+    # minute; the limit exists to catch a hung archive read rather than to
+    # allow one.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

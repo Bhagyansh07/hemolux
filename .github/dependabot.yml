@@ -1,0 +1,19 @@
+# Keep the exact pins in pyproject.toml and the pinned action versions from
+# going stale. Both are load-bearing on purpose: this project reports numbers,
+# and a silent dependency change is a silent change to the numbers, so
+# Dependabot opens pull requests and nothing else. Every bump has to be read
+# against EVALS.md and the full suite before it lands.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # The workflow actions are pinned by tag, not by SHA. Weekly is enough to
+  # pick up a new major before it becomes the default everywhere else.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

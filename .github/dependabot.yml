@@ -1,44 +1,45 @@
 # pyproject.toml's exact pins and the pinned workflow actions.
 #
-# Minor and patch updates are batched into one pull request per ecosystem so the
-# queue stays short. This repository is the one place where a bump is not free:
-# the pins in pyproject.toml are load-bearing, and a silent version change is a
-# silent change to the numbers EVALS.md reports. So a grouped PR here is a
-# read-the-diff-and-run-the-suite task, never a merge-on-sight.
+# Minor and patch updates arrive as one grouped pull request per
+# ecosystem, capped at three open PRs each. This is the one repository
+# where a bump is not free: the pins in pyproject.toml are
+# load-bearing, and a silent version change is a silent change to the
+# numbers EVALS.md reports. A grouped PR here is a read-the-diff and
+# re-run-the-suite task, never a merge on sight. The `onnx` and
+# `onnxruntime` pins are the sharp edge of that rule: they change what
+# the exported graph computes, so a bump to either belongs with a
+# re-run of the frozen evaluation.
 #
-# The `onnx` and `onnxruntime` pins are the sharp edge of that rule: they change
-# what the exported graph computes, so a bump to either belongs with a re-run of
-# the frozen evaluation, not just a green check.
-#
-# Auto-merge is deliberately absent.
+# Major updates are ignored outright. Auto-merge is deliberately absent.
 version: 2
 updates:
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 3
-    groups:
-      minor-and-patch:
-        patterns: ["*"]
-        update-types: ["minor", "patch"]
-    ignore:
-      - dependency-name: "onnxruntime"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "onnx"
-        update-types: ["version-update:semver-major"]
-
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 3
-    groups:
-      minor-and-patch:
-        patterns: ["*"]
-        update-types: ["minor", "patch"]
-    ignore:
-      - dependency-name: "actions/checkout"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "actions/setup-python"
-        update-types: ["version-update:semver-major"]
+- package-ecosystem: "pip"
+  directory: "/"
+  schedule:
+    interval: "weekly"
+  open-pull-requests-limit: 3
+  groups:
+    minor-and-patch:
+      patterns: ["*"]
+      update-types: ["minor", "patch"]
+  ignore:
+    # A major is a migration with its own test pass, so it is taken on
+    # deliberately rather than offered weekly. Delete this rule when you
+    # want to be told about majors again.
+    - dependency-name: "*"
+      update-types: ["version-update:semver-major"]
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
+    interval: "weekly"
+  open-pull-requests-limit: 3
+  groups:
+    minor-and-patch:
+      patterns: ["*"]
+      update-types: ["minor", "patch"]
+  ignore:
+    # A major is a migration with its own test pass, so it is taken on
+    # deliberately rather than offered weekly. Delete this rule when you
+    # want to be told about majors again.
+    - dependency-name: "*"
+      update-types: ["version-update:semver-major"]

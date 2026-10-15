@@ -51,7 +51,7 @@ jobs:
       HEMOLUX_STRICT_IMAGE_LOG: "1"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
@@ -100,7 +100,7 @@ jobs:
     # allow one.
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"

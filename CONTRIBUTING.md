@@ -1,5 +1,8 @@
 # Contributing
 
+This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). By taking
+part you agree to uphold it.
+
 ## Setup
 
 PyTorch must be installed from the CPU index. PyPI's default `torch` wheel

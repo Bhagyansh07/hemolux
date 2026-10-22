@@ -28,15 +28,15 @@ dependencies = [
     "matplotlib==3.11.2",
     "openpyxl==3.1.5",
     "xlrd==2.0.2",
-    "onnx==1.23.1",
-    "onnxruntime==1.30.0",
+    "onnx==1.23.2",
+    "onnxruntime==1.31.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest==9.1.1",
-    "ruff==0.16.10",
-    "mypy==2.3.1",
+    "ruff==0.17.1",
+    "mypy==2.4.0",
 ]
 
 [project.scripts]
